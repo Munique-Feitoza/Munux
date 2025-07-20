@@ -1,4 +1,4 @@
-# Declaração de Autoria — Munux
+# Declaração de Autoria: Munux
 
 **Projeto:** Munux  
 **Criadora:** Munique Alves Pacheco Feitoza  
