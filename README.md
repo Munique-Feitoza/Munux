@@ -1,13 +1,13 @@
 # 🌌 Munux
 
 **Munux** é uma distribuição Linux open source criada com um objetivo ousado:  
-tornar o domínio do sistema operacional acessível, elegante e poderoso, para quem busca mais do que usar — deseja **compreender** o Linux profundamente.
+tornar o domínio do sistema operacional acessível, elegante e poderoso, para quem busca mais do que usar... deseja **compreender** o Linux profundamente.
 
 ## 🚀 Visão
 
 O Munux nasce com uma proposta evolutiva:  
 oferecer um ambiente inicialmente amigável e visualmente atraente como o Fedora,  
-mas que convida o usuário a uma jornada de aprendizado até dominar o Linux **em seu núcleo mais puro** — o terminal.
+mas que convida o usuário a uma jornada de aprendizado até dominar o Linux **em seu núcleo mais puro**, o terminal.
 
 ## 🎯 Objetivos
 
@@ -26,10 +26,64 @@ mas que convida o usuário a uma jornada de aprendizado até dominar o Linux **e
 
 ## 🧠 Filosofia
 
-> “Não quero que você só clique —  
+> “Não quero que você só clique   
 quero que você entenda o que acontece **debaixo do clique**.”
 
 Munux é mais que uma distro. É um ambiente de aprendizado técnico e filosófico sobre como os sistemas funcionam.
+
+---
+
+## ⚙️ Funcionalidades Principais e Estrutura do Projeto
+
+### Níveis de aprendizado e permissões
+
+O Munux terá cinco níveis progressivos de aprendizado que desbloqueiam gradualmente mais permissões e acesso a comandos avançados:
+
+| Nível                 | Permissões e Restrições                                           | Avisos                  |
+|-----------------------|------------------------------------------------------------------|-------------------------|
+| 1 - Básico            | Acesso restrito, comandos básicos, proteção contra ações perigosas | Avisos constantes       |
+| 2 - Básico para médio  | Mais comandos liberados, restrições ainda aplicadas              | Avisos antes de ações   |
+| 3 - Médio             | Acesso a comandos técnicos intermediários                        | Avisos antes de ações   |
+| 4 - Médio para avançado| Quase sem restrições, sem avisos                                  | Sem avisos              |
+| 5 - Avançado          | Controle total, acesso ao modo Arch completo                      | Sem avisos              |
+
+Usuários receberão notificações ao desbloquear novos níveis, explicando as novas permissões.
+
+### Sistema de testes no terminal
+
+- Testes práticos serão realizados diretamente no terminal, para tirar o medo do uso e fortalecer o aprendizado.
+- O sistema validará automaticamente as respostas corretas.
+- Haverá bloqueio de múltiplas abas para evitar burla nos testes.
+- Testes serão liberados por notificação e o usuário poderá escolher quando realizá-los.
+- Não haverá monitoramento invasivo, como uso de webcam.
+
+### Interface e tutorial
+
+- Um painel lateral no terminal, similar ao Visual Studio Code, exibirá explicações detalhadas sobre comandos e suas opções enquanto o usuário digita.
+- Tutorial inicial opcional guiará o usuário pela configuração, uso do terminal e personalização do ambiente.
+- Disponibilização de documentação dos comandos para consulta offline integrada.
+
+### Modo Arch
+
+- O modo Arch será desbloqueado no nível avançado, podendo ser ativado ou desativado a qualquer momento.
+- Esse modo oferece a experiência completa do Arch Linux para usuários que desejam aprofundar seus conhecimentos.
+- O uso do modo Arch não será obrigatório para aprender Linux no Munux.
+
+### Segurança e restrições
+
+- Foco em proteger usuários contra execução de arquivos maliciosos.
+- Aplicação de restrições conforme o nível de aprendizado para evitar danos ao sistema.
+- Pesquisa e implementação futuras poderão incluir sandboxing, containers e sistemas como AppArmor ou SELinux.
+
+### Modo guiado e registro de progresso
+
+- O modo guiado estará disponível apenas no tutorial inicial, com opção de sair permanentemente.
+- O sistema registrará o progresso do usuário, permitindo acompanhar o avanço no aprendizado.
+
+### Comunidade e feedback
+
+- Espaço para usuários darem feedback, sugestões e reportar bugs.
+- As contribuições serão avaliadas para manter o foco e qualidade do projeto.
 
 ---
 
@@ -50,4 +104,3 @@ Acompanhe as atualizações e contribuições futuras por aqui!
 
 Munique Alves Pacheco Feitoza  
 [LinkedIn](https://www.linkedin.com/in/munique-feitoza-77034b231/) • [GitHub](https://github.com/Munique-Feitoza/)
-
