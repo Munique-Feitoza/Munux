@@ -1,0 +1,6 @@
+h# Arquivos binários do build
+*.bin
+
+# Arquivos ocultos temporários
+.git_hidden_message
+
