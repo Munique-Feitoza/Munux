@@ -39,16 +39,8 @@ make run
 
     * Criar uma imagem ISO bootável com GRUB.
 
+---
+
 ## Licença
 
 Este projeto está licenciado sob a GPLv3.
-
-
-### 3. Próximos passos para subir no GitHub
-
-1. No terminal, dentro do seu repositório munux-core:
-```bash
-git add bootloader.asm Makefile README.md
-git commit -m "Add bootloader com código comentado e README inicial"
-git push origin main  # ou branch que você estiver usando
-```
