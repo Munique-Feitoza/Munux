@@ -31,6 +31,13 @@ make
 make run
 ```
 
+## Requisitos:
+
+- i686-elf-gcc
+- i686-elf-binutils
+- make
+- QEMU
+
 ## Próximos passos
 
     * Desenvolver o kernel em C.
