@@ -4,9 +4,11 @@
 BITS 16                  ; Modo real (16bits)
 ORG 0x7C00               ; Define o ponto inicial da execução do bootloader na memória
 
-; As mensagens que serão mostrada na tela
-msg db "Iniciando Munux...", 0
-disk_error_msg db "Erro ao carregar kernel!", 0
+; As mensagens que serão mostradas na tela
+msg db "Iniciando Munux OS...", 13, 10, 0
+loading_msg db "Carregando kernel...", 13, 10, 0
+success_msg db "Kernel carregado com sucesso!", 13, 10, 0
+disk_error_msg db "Erro ao carregar kernel!", 13, 10, 0
 
 start:
     cli                  ; Desativa interrupções
@@ -17,56 +19,101 @@ start:
     mov sp, 0x7C00       ; Define o ponteiro da pilha (SP) no topo do setor de boot (0x7C00)
     sti                  ; Ativa interrupções
 
-    ; Mensagem: "Iniciando Munux..."
-    mov si, msg              ; Aponta o registrador SI para o início da mensagem
+    ; Limpar a tela
+    call clear_screen
 
-print_char:
-    lodsb                ; Carrega o próximo byte da mensagem para AL e incrementa SI
-    or al, al            ; Verifica se é NULL (fim da string)
-    jz hang              ; Se zero, pula para loop infinito (fim da mensagem)
-    mov ah, 0x0E         ; Modo de saida teletipo 
-    int 0x10             ; Chama a interrupção da BIOS para imprimir caractere em AL
-    jmp print_char       ; Loop para continuar imprimindo o próximo caractere
+    ; Mensagem: "Iniciando Munux OS..."
+    mov si, msg
+    call print_string
+    
+    ; Mensagem: "Carregando kernel..."
+    mov si, loading_msg
+    call print_string
+    
+    ; Carregar o kernel
+    call load_kernel
+    
+    ; Mensagem de sucesso
+    mov si, success_msg
+    call print_string
+    
+    ; Pequena pausa antes de continuar
+    call delay
+    
+    ; Entrar em modo protegido
+    jmp enter_pm
 
-; Começa a função para carregar kernel do disco
+; Função para limpar a tela
+clear_screen:
+    pusha               ; Salva todos os registradores
+    mov ah, 0x07        ; Função scroll up
+    mov al, 0           ; Limpar tela inteira
+    mov bh, 0x07        ; Atributo (cinza claro sobre preto)
+    mov cx, 0           ; Canto superior esquerdo
+    mov dx, 0x184F      ; Canto inferior direito (24,79)
+    int 0x10           ; Chama interrupção BIOS
+    
+    ; Posicionar cursor no início
+    mov ah, 0x02        ; Função set cursor position
+    mov bh, 0           ; Página 0
+    mov dx, 0           ; Linha 0, coluna 0
+    int 0x10           ; Chama interrupção BIOS
+    popa               ; Restaura registradores
+    ret
+
+; Função para imprimir string
+print_string:
+    pusha              ; Salva todos os registradores
+print_loop:
+    lodsb              ; Carrega próximo caractere
+    or al, al          ; Verifica se é NULL
+    jz print_done      ; Se zero, termina
+    mov ah, 0x0E       ; Função teletipo
+    mov bh, 0          ; Página 0
+    mov bl, 0x07       ; Cor cinza claro
+    int 0x10           ; Chama BIOS
+    jmp print_loop     ; Continua loop
+print_done:
+    popa               ; Restaura registradores
+    ret
+
+; Função para adicionar delay
+delay:
+    pusha
+    mov cx, 0xFFFF
+delay_loop:
+    nop
+    loop delay_loop
+    popa
+    ret
+
+; Carrega o kernel do disco
 ; Lê 15 setores a partir do setor 2 (imediatamente após o bootloader)
 ; Armazena em 0x80000 (512KB), que é um endereço dentro do primeiro megabyte
-
 load_kernel:
-    mov bx, 0x0000
-    mov ax, 0x8000
-    mov es, ax           ; Segmento ES para 0x8000 (0x8000 * 16 = 0x80000)
-    mov di, 0x0000       ; Offset DI para 0 (início do buffer)
-    mov cx, 15           ; Número de setores a ler
-    mov ch, 0            ; Cilindro 0
-    mov cl, 2            ; Começa a ler a partir do setor 2
-    mov dh, 0            ; Cabeça 0
-    mov dl, 0x80         ; Drive 0x80 (primeiro disco rígido)
-
-read_sector_loop:
-    push cx              ; Salva contador CX na pilha
-    mov ah, 0x02         ; Função da BIOS: ler setores do disco
-    mov al, 1            ; Número de setores a ler por vez (1)
-    int 0x13             ; Chama BIOS para ler setor
-    jc disk_error        ; Se carry flag setada, ocorreu erro, vai para tratamento
-
-    add di, 512          ; Incrementa DI para próximo buffer (+512 bytes por setor)
-    inc cl               ; Próximo setor no disco
-    pop cx               ; Restaura CX
-    loop read_sector_loop ; Decrementa CX, se não zero, repete o loop
-
-    jmp enter_pm         ; Kernel carregado, entra em modo protegido
+    pusha                    ; Salva todos os registradores
+    
+    mov bx, 0x0000          ; Offset inicial
+    mov ax, 0x8000          ; Segmento de destino
+    mov es, ax              ; ES = 0x8000 (endereço 0x80000)
+    
+    mov ah, 0x02            ; Função BIOS: ler setores
+    mov al, 15              ; Número de setores a ler
+    mov ch, 0               ; Cilindro 0
+    mov cl, 2               ; Setor inicial 2
+    mov dh, 0               ; Cabeça 0
+    mov dl, 0x80            ; Drive (primeiro disco rígido)
+    
+    int 0x13                ; Chama BIOS
+    jc disk_error           ; Se erro, trata
+    
+    popa                    ; Restaura registradores
+    ret
 
 disk_error:
-    mov si, disk_error_msg ; Aponta SI para mensagem de erro
-
-print_disk_error:
-    lodsb                 ; Carrega byte da mensagem em AL, incrementa SI
-    or al, al             ; Testa fim da string
-    jz hang               ; Se zero, pula para loop infinito
-    mov ah, 0x0E          ; Função teletipo BIOS para imprimir caractere
-    int 0x10              ; Chama BIOS para imprimir caractere
-    jmp print_disk_error  ; Repete para imprimir mensagem toda
+    mov si, disk_error_msg  ; Carrega mensagem de erro
+    call print_string       ; Imprime mensagem
+    jmp hang                ; Trava sistema
 
 hang:
     jmp hang              ; Loop infinito para travar o sistema
