@@ -4,3 +4,4 @@ h# Arquivos binários do build
 # Arquivos ocultos temporários
 .git_hidden_message
 
+munux-core/build/
