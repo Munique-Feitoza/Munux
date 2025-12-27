@@ -4,8 +4,8 @@
 # bootável do sistema operacional Munux.
 
 # Variáveis de configuração
-CC = i686-elf-gcc
-LD = i686-elf-ld
+CC = gcc
+LD = ld
 ASM = nasm
 OBJCOPY = objcopy
 
@@ -19,8 +19,8 @@ PROCESS_DIR = $(KERNEL_DIR)/process
 DRIVERS_DIR = $(KERNEL_DIR)/drivers
 
 # Flags de compilação
-CFLAGS = -ffreestanding -m32 -Wall -Wextra -std=c99 -O2 -nostdlib -fno-builtin -fno-stack-protector
-LDFLAGS = -T $(KERNEL_DIR)/kernel.ld -nostdlib
+CFLAGS = -ffreestanding -m32 -Wall -Wextra -std=c99 -O2 -nostdlib -fno-builtin -fno-stack-protector -fno-pic -fno-pie
+LDFLAGS = -m elf_i386 -T $(KERNEL_DIR)/kernel.ld -nostdlib
 ASMFLAGS = -f bin
 ASMFLAGS_ELF = -f elf32
 
@@ -44,7 +44,8 @@ KERNEL_C_SOURCES = $(KERNEL_DIR)/kernel.c \
                    $(DRIVERS_DIR)/disk.c
 
 # Kernel ASM files
-KERNEL_ASM_SOURCES = $(INTERRUPTS_DIR)/interrupt.asm \
+KERNEL_ASM_SOURCES = $(KERNEL_DIR)/multiboot.asm \
+                     $(INTERRUPTS_DIR)/interrupt.asm \
                      $(PROCESS_DIR)/switch.asm
 
 # Object files
@@ -58,11 +59,14 @@ KERNEL_BIN = $(BUILD_DIR)/kernel.bin
 ISO_IMAGE = $(BUILD_DIR)/munux.iso
 
 # Targets principais
-.PHONY: all clean run debug test install
+.PHONY: all clean run debug test install qemu qemu-direct qemu-debug
 
-all: $(ISO_IMAGE)
+all: $(BUILD_DIR)/munux.img
 	@echo "✅ Build concluído com sucesso!"
-	@echo "📀 Imagem ISO: $(ISO_IMAGE)"
+	@echo "💾 Imagem: $(BUILD_DIR)/munux.img"
+	@echo ""
+	@echo "Para testar, execute: make qemu"
+	@echo "Para criar ISO (requer grub-mkrescue): make $(ISO_IMAGE)"
 
 # Compilar o bootloader
 $(BOOTLOADER_BIN): $(BOOTLOADER_SRC) | $(BUILD_DIR)
@@ -123,6 +127,10 @@ $(BUILD_DIR)/disk.o: $(DRIVERS_DIR)/disk.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compilar kernel ASM objects
+$(BUILD_DIR)/multiboot.o: $(KERNEL_DIR)/multiboot.asm | $(BUILD_DIR)
+	@echo "🔧 Compilando $<..."
+	$(ASM) $(ASMFLAGS_ELF) $< -o $@
+
 $(BUILD_DIR)/interrupt.o: $(INTERRUPTS_DIR)/interrupt.asm | $(BUILD_DIR)
 	@echo "🔧 Compilando $<..."
 	$(ASM) $(ASMFLAGS_ELF) $< -o $@
@@ -134,7 +142,7 @@ $(BUILD_DIR)/switch.o: $(PROCESS_DIR)/switch.asm | $(BUILD_DIR)
 # Linkar o kernel ELF
 $(KERNEL_ELF): $(KERNEL_OBJS)
 	@echo "🔗 Linkando kernel..."
-	$(LD) $(LDFLAGS) -o $@ $^
+	$(LD) $(LDFLAGS) -o $@ $(BUILD_DIR)/multiboot.o $(filter-out $(BUILD_DIR)/multiboot.o,$(KERNEL_OBJS))
 
 # Converter kernel ELF para binário
 $(KERNEL_BIN): $(KERNEL_ELF)
@@ -142,11 +150,21 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 	$(OBJCOPY) -O binary $< $@
 
 # Gerar imagem ISO
-$(ISO_IMAGE): $(BOOTLOADER_BIN) $(KERNEL_BIN) | $(BUILD_DIR)/iso/boot/grub
+$(ISO_IMAGE): $(KERNEL_ELF) | $(BUILD_DIR)/iso/boot/grub
 	@echo "💿 Criando imagem ISO..."
-	cp $(KERNEL_BIN) $(BUILD_DIR)/iso/boot/
-	grub-mkrescue -o $@ $(BUILD_DIR)/iso 2>/dev/null
+	cp $(KERNEL_ELF) $(BUILD_DIR)/iso/boot/kernel.bin
+	cp boot/grub/grub.cfg $(BUILD_DIR)/iso/boot/grub/grub.cfg
+	@which grub-mkrescue > /dev/null 2>&1 || (echo "❌ grub-mkrescue não encontrado." && exit 1)
+	grub-mkrescue -o $@ $(BUILD_DIR)/iso 2>/dev/null || (echo "❌ Erro ao criar ISO" && exit 1)
 	@echo "✅ ISO criado: $(ISO_IMAGE)"
+
+# Criar imagem de disco raw (alternativa ao ISO)
+$(BUILD_DIR)/munux.img: $(BOOTLOADER_BIN) $(KERNEL_BIN)
+	@echo "💾 Criando imagem de disco..."
+	dd if=/dev/zero of=$@ bs=512 count=2880 2>/dev/null
+	dd if=$(BOOTLOADER_BIN) of=$@ conv=notrunc 2>/dev/null
+	dd if=$(KERNEL_BIN) of=$@ seek=1 conv=notrunc 2>/dev/null
+	@echo "✅ Imagem criada: $@"
 
 # Criar diretórios necessários
 $(BUILD_DIR):
@@ -158,14 +176,37 @@ $(BUILD_DIR)/iso/boot/grub: | $(BUILD_DIR)
 # Executar no QEMU
 run: $(ISO_IMAGE)
 	@echo "🚀 Executando Munux no QEMU..."
-	qemu-system-i386 -cdrom $< -m 32M
+	qemu-system-i386 -cdrom $< -m 32M -serial stdio
+
+# Executar diretamente com imagem raw (sem precisar de GRUB)
+qemu-direct: $(BUILD_DIR)/munux.img
+	@echo "🚀 Executando Munux no QEMU (modo direto)..."
+	qemu-system-i386 -drive file=$<,format=raw,if=floppy -m 32M -serial stdio -d cpu_reset,guest_errors
+
+# Atalho para QEMU
+qemu: qemu-direct
 
 # Executar no QEMU com debug
 debug: $(ISO_IMAGE)
 	@echo "🐛 Executando Munux no QEMU (modo debug)..."
 	qemu-system-i386 -cdrom $< -m 32M -s -S
 
+# Debug modo direto
+qemu-debug: $(BUILD_DIR)/munux.img
+	@echo "🐛 Executando Munux no QEMU (modo debug direto)..."
+	qemu-system-i386 -drive format=raw,file=$< -m 32M -s -S
+
 # Executar testes básicos
+# Executar no QEMU (direto do kernel ELF - não precisa de ISO)
+qemu-kernel: $(KERNEL_ELF)
+	@echo "🚀 Iniciando Munux no QEMU (boot direto do kernel)..."
+	qemu-system-i386 -kernel $(KERNEL_ELF) -m 32M
+
+# Executar no QEMU a partir da ISO
+qemu-iso: $(ISO_IMAGE)
+	@echo "🚀 Iniciando Munux no QEMU (boot da ISO)..."
+	qemu-system-i386 -cdrom $(ISO_IMAGE) -m 32M
+
 test: $(ISO_IMAGE)
 	@echo "🧪 Executando testes..."
 	@echo "Verificando se a imagem ISO foi criada..."
