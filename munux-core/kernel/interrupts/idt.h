@@ -30,15 +30,15 @@ struct idt_ptr {
 } __attribute__((packed));
 
 // Estrutura de registradores salvos durante interrupção
-struct registers {
+typedef struct registers {
     uint32_t ds;                                        // Segmento de dados
     uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;   // Registradores salvos por pusha
     uint32_t int_no, err_code;                          // Número da interrupção e código de erro
     uint32_t eip, cs, eflags, useresp, ss;             // Salvos automaticamente pelo processador
-};
+} registers_t;
 
 // Tipo de função para handlers de interrupção
-typedef void (*isr_t)(struct registers*);
+typedef void (*isr_t)(registers_t);
 
 // Funções principais
 void idt_init(void);
