@@ -11,7 +11,7 @@
 static volatile uint32_t timer_ticks = 0;
 
 // Handler de interrupção do timer
-static void timer_callback(struct registers* regs) {
+static void timer_callback(registers_t regs) {
     (void)regs; // Não usado
     timer_ticks++;
 }

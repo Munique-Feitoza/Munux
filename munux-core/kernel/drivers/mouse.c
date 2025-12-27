@@ -42,7 +42,7 @@ static uint8_t mouse_read(void) {
 }
 
 // Handler de interrupção
-static void mouse_handler(struct registers* regs) {
+static void mouse_handler(registers_t regs) {
     (void)regs;
     
     mouse_byte[mouse_cycle++] = inb(0x60);

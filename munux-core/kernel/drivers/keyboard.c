@@ -59,7 +59,7 @@ static void keyboard_buffer_put(char c) {
 }
 
 // Handler de interrupção do teclado
-static void keyboard_handler(struct registers* regs) {
+static void keyboard_handler(registers_t regs) {
     (void)regs; // Não usado
     
     uint8_t scancode = inb(0x60);
