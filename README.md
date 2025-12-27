@@ -95,8 +95,45 @@ Este projeto está licenciado sob a [GNU General Public License v3.0 (GPLv3)](LI
 
 ## 📌 Status atual
 
-O projeto está em fase de **planejamento e estruturação da base**.  
-Acompanhe as atualizações e contribuições futuras por aqui!
+O projeto alcançou um marco significativo com a **versão 0.2**. O kernel agora possui todos os subsistemas fundamentais implementados e funcionais:
+
+### ✅ Implementado (Nível 1 Completo)
+
+**Sistema de Interrupções**
+- IDT completa com 256 entradas
+- Handlers para todas as exceções do processador
+- Gerenciamento de IRQs de hardware
+- Reprogramação do PIC
+
+**Gerenciamento de Memória**
+- Gerenciador de memória física (PMM) com alocação baseada em bitmap
+- Gerenciador de memória virtual (VMM) com paginação completa
+- Heap allocator com malloc/free
+- Proteção de memória e isolamento
+
+**Gerenciamento de Processos**
+- Process Control Block (PCB) completo
+- Scheduler round-robin com 4 níveis de prioridade
+- Multitasking preemptivo
+- Context switching em assembly otimizado
+
+**Drivers de Dispositivos**
+- Timer (PIT) para agendamento e contagem de tempo
+- Teclado PS/2 completo com layout ABNT2
+- Mouse PS/2 com suporte a 3 botões
+- Porta serial para debug
+- Controlador de disco ATA/IDE
+
+### 📋 Próximos Passos
+
+**Fase 2 - Serviços do Sistema** (Em Planejamento)
+- Virtual File System (VFS)
+- Sistema de arquivos ext2
+- Biblioteca C padrão
+- Interface de system calls
+- Separação de modo usuário/kernel
+
+Acompanhe o desenvolvimento detalhado em `docs/ROADMAP.md`.
 
 ---
 
