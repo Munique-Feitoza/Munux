@@ -6,6 +6,7 @@
 
 #include "process.h"
 #include "../drivers/timer.h"
+#include "../interrupts/idt.h"
 
 // Filas de processos por prioridade
 static process_t* ready_queue[4] = {0}; // Uma fila por prioridade
@@ -15,7 +16,7 @@ extern process_t* current_process;
 extern process_t* idle_process;
 
 // Callback do timer para preempção
-static void scheduler_tick(struct registers* regs) {
+static void scheduler_tick(registers_t regs) {
     (void)regs;
     
     if (!current_process) return;

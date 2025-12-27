@@ -6,17 +6,14 @@
 #include "../interrupts/idt.h"
 
 // Processo atual e idle
-static process_t* current_process = 0;
-static process_t* idle_process = 0;
+process_t* current_process = 0;
+process_t* idle_process = 0;
 
 // Lista de processos
 static process_t* process_list = 0;
 
 // Próximo PID disponível
 static uint32_t next_pid = 1;
-
-// Quantum padrão (em ticks)
-#define DEFAULT_QUANTUM 10
 
 // Processo idle (executa quando não há nada para fazer)
 static void idle_task(void) {

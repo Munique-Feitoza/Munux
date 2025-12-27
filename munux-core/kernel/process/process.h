@@ -30,6 +30,9 @@ typedef enum {
     PRIORITY_REALTIME = 3
 } process_priority_t;
 
+// Constante de quantum padrão (50ms = 50 ticks)
+#define DEFAULT_QUANTUM 50
+
 // Contexto de CPU salvo
 typedef struct {
     uint32_t eax, ebx, ecx, edx;
