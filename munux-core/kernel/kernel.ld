@@ -1,22 +1,27 @@
-ENTRY(kernel_main)
+ENTRY(_start)
 
 SECTIONS
 {
-  . = 0x00080000; /* Carregar kernel em 512KB */
+  . = 0x00100000; /* Carregar kernel em 1MB (padrão multiboot) */
 
-  .text : {
+  /* Header multiboot DEVE vir primeiro */
+  .multiboot ALIGN(4K) : {
+    *(.multiboot)
+  }
+
+  .text ALIGN(4K) : {
     *(.text)
   }
 
-  .rodata : {
+  .rodata ALIGN(4K) : {
     *(.rodata)
   }
 
-  .data : {
+  .data ALIGN(4K) : {
     *(.data)
   }
 
-  .bss : {
+  .bss ALIGN(4K) : {
     *(.bss)
     *(COMMON)
   }
