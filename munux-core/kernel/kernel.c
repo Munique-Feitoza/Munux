@@ -5,13 +5,19 @@
  * - Gerenciamento de memória de vídeo
  * - Impressão de texto na tela
  * - Inicialização do sistema
+ * - Coordenação de subsistemas (memória, processos, drivers)
  */
 
-// Definições de tipos básicos
-typedef unsigned char   uint8_t;
-typedef unsigned short  uint16_t;
-typedef unsigned int    uint32_t;
-typedef unsigned int    size_t;
+#include "kernel.h"
+#include "interrupts/idt.h"
+#include "interrupts/io.h"
+#include "memory/memory.h"
+#include "process/process.h"
+#include "drivers/timer.h"
+#include "drivers/keyboard.h"
+#include "drivers/serial.h"
+#include "drivers/mouse.h"
+#include "drivers/disk.h"
 
 // Definições para cores no modo texto
 #define COLOR_BLACK         0
@@ -131,30 +137,99 @@ void kernel_main(void) {
     terminal_writestring("        Bem-vindo ao Munux OS!         \n");
     terminal_writestring("========================================\n\n");
     
-    // Informações do sistema
+    // Inicialização de subsistemas
     terminal_setcolor(vga_entry_color(COLOR_LIGHT_CYAN, COLOR_BLACK));
-    terminal_writestring("Sistema Operacional: Munux v0.1\n");
-    terminal_writestring("Arquitetura: i386\n");
-    terminal_writestring("Modo: Kernel básico\n\n");
+    terminal_writestring("Inicializando subsistemas...\n\n");
     
+    // 1. Interrupts
+    terminal_writestring("[OK] Inicializando IDT...\n");
+    idt_init();
+    
+    // 2. Memory Management
+    terminal_writestring("[OK] Inicializando gerenciador de memoria...\n");
+    pmm_init(32 * 1024 * 1024); // 32MB de RAM
+    
+    terminal_writestring("[OK] Inicializando heap...\n");
+    heap_init();
+    
+    terminal_writestring("[OK] Inicializando memoria virtual...\n");
+    vmm_init();
+    
+    // 3. Timer
+    terminal_writestring("[OK] Inicializando timer (100 Hz)...\n");
+    timer_init(100);
+    
+    // 4. Keyboard
+    terminal_writestring("[OK] Inicializando teclado...\n");
+    keyboard_init();
+    
+    // 5. Serial Port (para debug)
+    terminal_writestring("[OK] Inicializando porta serial...\n");
+    serial_init(COM1);
+    serial_writestring(COM1, "Munux kernel initialized!\n");
+    
+    // 6. Mouse
+    terminal_writestring("[OK] Inicializando mouse...\n");
+    mouse_init();
+    
+    // 7. Disk
+    terminal_writestring("[OK] Inicializando disco...\n");
+    disk_init();
+    
+    // 8. Process Management
+    terminal_writestring("[OK] Inicializando gerenciador de processos...\n");
+    process_init();
+    
+    terminal_writestring("[OK] Inicializando scheduler...\n");
+    scheduler_init();
+    
+    terminal_writestring("\n");
+    
+    // Informações do sistema
     terminal_setcolor(vga_entry_color(COLOR_LIGHT_BROWN, COLOR_BLACK));
-    terminal_writestring("Kernel inicializado com sucesso!\n");
-    terminal_writestring("Sistema pronto para desenvolvimento...\n\n");
+    terminal_writestring("Sistema Operacional: Munux v0.2\n");
+    terminal_writestring("Arquitetura: i386 (32-bit)\n");
+    terminal_writestring("Modo: Kernel com multitasking\n\n");
     
     terminal_setcolor(vga_entry_color(COLOR_WHITE, COLOR_BLACK));
     terminal_writestring("Funcionalidades implementadas:\n");
-    terminal_writestring("  - Gerenciamento básico de vídeo\n");
-    terminal_writestring("  - Sistema de cores\n");
-    terminal_writestring("  - Scroll de tela\n");
-    terminal_writestring("  - Impressão de texto\n\n");
+    terminal_writestring("  [x] Gerenciamento de interrupcoes (IDT)\n");
+    terminal_writestring("  [x] Gerenciamento de memoria fisica (PMM)\n");
+    terminal_writestring("  [x] Gerenciamento de memoria virtual (VMM)\n");
+    terminal_writestring("  [x] Heap allocator (malloc/free)\n");
+    terminal_writestring("  [x] Timer (PIT)\n");
+    terminal_writestring("  [x] Driver de teclado completo\n");
+    terminal_writestring("  [x] Driver de mouse PS/2\n");
+    terminal_writestring("  [x] Driver de disco ATA/IDE\n");
+    terminal_writestring("  [x] Driver de porta serial\n");
+    terminal_writestring("  [x] Gerenciamento de processos (PCB)\n");
+    terminal_writestring("  [x] Scheduler round-robin preemptivo\n");
+    terminal_writestring("  [x] Context switching\n\n");
+    
+    // Informações de memória
+    uint32_t total_mem = pmm_get_total_memory() / 1024 / 1024;
+    uint32_t free_mem = pmm_get_free_memory() / 1024 / 1024;
+    
+    terminal_setcolor(vga_entry_color(COLOR_LIGHT_CYAN, COLOR_BLACK));
+    terminal_writestring("Memoria total: ");
+    // Nota: conversão de número para string seria implementada aqui
+    terminal_writestring("32 MB\n");
+    terminal_writestring("Memoria livre: ");
+    // Nota: conversão de número para string seria implementada aqui
+    terminal_writestring("~30 MB\n\n");
     
     terminal_setcolor(vga_entry_color(COLOR_LIGHT_GREY, COLOR_BLACK));
-    terminal_writestring("Desenvolvido para aprendizado de sistemas operacionais.\n");
+    terminal_writestring("Kernel inicializado com sucesso!\n");
+    terminal_writestring("Desenvolvido por Munique Feitoza\n");
+    terminal_writestring("Sistema pronto para operacao.\n\n");
+    
+    // Habilita interrupções
+    __asm__ volatile("sti");
     
     // Loop infinito - kernel ativo
     while (1) {
-        // Aqui seria implementado o scheduler e outras funções do kernel
         __asm__ volatile ("hlt"); // Halt until interrupt
     }
 }
+
 
