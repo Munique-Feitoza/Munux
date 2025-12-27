@@ -1,53 +1,78 @@
 # Munux Core
 
-Este é o núcleo do sistema operacional Munux, com um bootloader simples escrito em Assembly.
+This is the core kernel of the Munux operating system - a fully functional, modern OS kernel implementing fundamental concepts including memory management, process scheduling, interrupt handling, and device drivers.
 
-## Sobre o Bootloader
+## Features
 
-- O bootloader é carregado pela BIOS na memória no endereço `0x7C00`.
-- Ele imprime uma mensagem na tela `"Iniciando Munux..."`.
-- Após imprimir, trava em um loop infinito para fins de teste.
-- O código está escrito em Assembly 16 bits (modo real).
-- Contém a assinatura `0xAA55` para ser reconhecido como bootloader válido.
+### Interrupt Management
+- Complete IDT (Interrupt Descriptor Table) with 256 entries
+- CPU exception handlers for all x86 exceptions
+- Hardware IRQ management with PIC reprogramming
+- Extensible interrupt handler registration system
 
-## Estrutura do Projeto
+### Memory Management
+- **Physical Memory Manager**: Bitmap-based frame allocation for 4KB pages
+- **Virtual Memory Manager**: Full paging support with page directory and page tables
+- **Heap Allocator**: Dynamic memory allocation with malloc/free
+- Memory protection and isolation between kernel spaces
+- Efficient memory utilization with block coalescing
 
-- `bootloader.asm`: código-fonte do bootloader.
-- `Makefile`: automatiza a compilação e execução no QEMU.
-- `bootloader.bin`: arquivo binário gerado pelo NASM.
-- `kernel.c` (em desenvolvimento): código do kernel em C.
-- `linker.ld` (em desenvolvimento): script de linkagem para o kernel.
-- `iso/boot/grub/grub.cfg` (em desenvolvimento): configuração do GRUB.
+### Process Management
+- Process Control Block (PCB) structure with complete state tracking
+- Round-robin scheduler with four priority levels
+- Preemptive multitasking with quantum-based time slicing
+- Context switching implemented in optimized assembly
+- Support for process creation, termination, and state transitions
 
-## Como compilar e testar
+### Device Drivers
+- **Timer (PIT)**: Programmable Interval Timer for scheduling and timekeeping
+- **Keyboard**: Complete PS/2 keyboard driver with ABNT2 layout, modifier keys, and circular buffer
+- **Mouse**: PS/2 mouse driver with three-button support and movement tracking
+- **Serial Port**: RS-232 communication for debugging and external device communication
+- **Disk**: ATA/IDE disk controller with sector-level read/write operations
 
-1. Compile o bootloader com:
+## Building
+
+### Prerequisites
+
+- **i686-elf-gcc**: Cross-compiler for bare-metal x86
+- **i686-elf-binutils**: Binary utilities (linker, assembler)
+- **NASM**: Netwide Assembler for bootloader and stubs
+- **GRUB**: grub-mkrescue for creating bootable ISOs
+- **QEMU**: x86 system emulator for testing
+
+### Compilation
+
+```bash
+make            # Build everything
+make clean      # Remove build artifacts
+make run        # Build and run in QEMU
+make debug      # Build and start with GDB server
+make test       # Run automated tests
 ```
-make
-```
 
-2. Execute no QEMU com:
-```
-make run
-```
+## Documentation
 
-## Requisitos:
+Comprehensive documentation is available in the `docs/` directory:
 
-- i686-elf-gcc
-- i686-elf-binutils
-- make
-- QEMU
+- **ARCHITECTURE.md**: System design and component overview
+- **MEMORY.md**: Memory management subsystem details
+- **PROCESSES.md**: Process management and scheduling
+- **INTERRUPTS.md**: Interrupt handling system
+- **DRIVERS.md**: Device driver architecture
+- **BUILD.md**: Building and testing procedures
+- **API.md**: Complete kernel API reference
+- **ROADMAP.md**: Development roadmap and future plans
 
-## Próximos passos
+## License
 
-    * Desenvolver o kernel em C.
+This project is licensed under the GPLv3.
 
-    * Integrar bootloader com o kernel.
+## Author
 
-    * Criar uma imagem ISO bootável com GRUB.
+Munique Feitoza
 
----
+## Repository
 
-## Licença
+https://github.com/Munique-Feitoza/Munux
 
-Este projeto está licenciado sob a GPLv3.
