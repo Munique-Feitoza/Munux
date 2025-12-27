@@ -50,17 +50,6 @@ void terminal_writestring(const char* data);
 
 // Protótipos de funções utilitárias
 size_t strlen(const char* str);
-uint8_t vga_entry_color(uint8_t fg, uint8_t bg);
-uint16_t vga_entry(unsigned char uc, uint8_t color);
-
-// Funções de I/O port (definidas em interrupts/io.h)
-void outb(uint16_t port, uint8_t val);
-uint8_t inb(uint16_t port);
-void outw(uint16_t port, uint16_t val);
-uint16_t inw(uint16_t port);
-void outl(uint16_t port, uint32_t val);
-uint32_t inl(uint16_t port);
-void io_wait(void);
 
 // Função principal do kernel
 void kernel_main(void);
