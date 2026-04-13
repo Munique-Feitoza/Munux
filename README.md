@@ -1,143 +1,157 @@
-# 🌌 Munux
+# 🌌 Munux Operating System
 
-**Munux** é uma distribuição Linux open source criada com um objetivo ousado:  
-tornar o domínio do sistema operacional acessível, elegante e poderoso, para quem busca mais do que usar... deseja **compreender** o Linux profundamente.
+![Status](https://img.shields.io/badge/Status-Active_Development-brightgreen)
+![Kernel](https://img.shields.io/badge/Type-Monolithic_Kernel-blue)
+![Arch](https://img.shields.io/badge/Arch-x86-orange)
+![License](https://img.shields.io/badge/License-GPLv3-red)
 
-## 🚀 Visão
-
-O Munux nasce com uma proposta evolutiva:  
-oferecer um ambiente inicialmente amigável e visualmente atraente como o Fedora,  
-mas que convida o usuário a uma jornada de aprendizado até dominar o Linux **em seu núcleo mais puro**, o terminal.
-
-## 🎯 Objetivos
-
-- Criar um sistema baseado em Arch ou semelhante, leve e modular.
-- Oferecer camadas de aprendizado: o usuário escolhe se quer apenas usar ou ir além.
-- Fornecer um ambiente visual bonito no início, com a possibilidade de "remover camadas" e mergulhar no uso avançado.
-- Incentivar o estudo de Linux, Shell Script, permissões, gerenciamento de pacotes, inicialização, etc.
-- Ser um projeto 100% open source e colaborativo.
-
-## 💻 Para quem é o Munux?
-
-- Pessoas iniciantes que querem aprender Linux com profundidade.
-- Usuários intermediários que desejam mais controle sobre seu sistema.
-- Entusiastas que sonham em dominar o terminal.
-- Desenvolvedores e hackers que buscam um ambiente personalizável, educativo e elegante.
-
-## 🧠 Filosofia
-
-> “Não quero que você só clique   
-quero que você entenda o que acontece **debaixo do clique**.”
-
-Munux é mais que uma distro. É um ambiente de aprendizado técnico e filosófico sobre como os sistemas funcionam.
+**Munux** is an educational operating system built from scratch with a bold goal: to make low-level systems programming accessible, elegant, and understandable. It is designed for those who don't just want to use a computer, but desire to **understand** it to its core.
 
 ---
 
-## ⚙️ Funcionalidades Principais e Estrutura do Projeto
+## 🚀 Vision
 
-### Níveis de aprendizado e permissões
+Munux was born from an evolutionary proposal: to provide an environment that invites the user on a journey from basic usage to mastering the **kernel and terminal**.
 
-O Munux terá cinco níveis progressivos de aprendizado que desbloqueiam gradualmente mais permissões e acesso a comandos avançados:
+Unlike standard Linux distributions that hide complexity, Munux exposes the internal workings of the operating system (Memory, Interrupts, Scheduling) through its own custom kernel implementation, serving as the ultimate learning tool for developers and enthusiasts.
 
-| Nível                 | Permissões e Restrições                                           | Avisos                  |
-|-----------------------|------------------------------------------------------------------|-------------------------|
-| 1 - Básico            | Acesso restrito, comandos básicos, proteção contra ações perigosas | Avisos constantes       |
-| 2 - Básico para médio  | Mais comandos liberados, restrições ainda aplicadas              | Avisos antes de ações   |
-| 3 - Médio             | Acesso a comandos técnicos intermediários                        | Avisos antes de ações   |
-| 4 - Médio para avançado| Quase sem restrições, sem avisos                                  | Sem avisos              |
-| 5 - Avançado          | Controle total, acesso ao modo Arch completo                      | Sem avisos              |
+## 🎯 Objectives
 
-Usuários receberão notificações ao desbloquear novos níveis, explicando as novas permissões.
+- **Build from Scratch**: A lightweight, modular kernel inspired by Unix/Linux concepts.
+- **Layered Learning**: Users choose their depth—from high-level usage to low-level kernel hacking.
+- **Gamified Mastery**: A progressive system that unlocks "dangerous" commands as the user proves their knowledge.
+- **Transparency**: 100% open source code designed to be read and studied, not just executed.
 
-### Sistema de testes no terminal
+## 💻 Who is Munux for?
 
-- Testes práticos serão realizados diretamente no terminal, para tirar o medo do uso e fortalecer o aprendizado.
-- O sistema validará automaticamente as respostas corretas.
-- Haverá bloqueio de múltiplas abas para evitar burla nos testes.
-- Testes serão liberados por notificação e o usuário poderá escolher quando realizá-los.
-- Não haverá monitoramento invasivo, como uso de webcam.
+- **Students**: Who want to understand how Operating Systems work under the hood.
+- **Developers**: Who want to bridge the gap between software and hardware.
+- **Enthusiasts**: Who dream of building or understanding their own kernel.
+- **Hackers**: Who seek a deep understanding of memory management and system security.
 
-### Interface e tutorial
+## 🧠 Philosophy
 
-- Um painel lateral no terminal, similar ao Visual Studio Code, exibirá explicações detalhadas sobre comandos e suas opções enquanto o usuário digita.
-- Tutorial inicial opcional guiará o usuário pela configuração, uso do terminal e personalização do ambiente.
-- Disponibilização de documentação dos comandos para consulta offline integrada.
+> "I don't want you to just click.  
+> I want you to understand what happens **beneath the click**."
 
-### Modo Arch
-
-- O modo Arch será desbloqueado no nível avançado, podendo ser ativado ou desativado a qualquer momento.
-- Esse modo oferece a experiência completa do Arch Linux para usuários que desejam aprofundar seus conhecimentos.
-- O uso do modo Arch não será obrigatório para aprender Linux no Munux.
-
-### Segurança e restrições
-
-- Foco em proteger usuários contra execução de arquivos maliciosos.
-- Aplicação de restrições conforme o nível de aprendizado para evitar danos ao sistema.
-- Pesquisa e implementação futuras poderão incluir sandboxing, containers e sistemas como AppArmor ou SELinux.
-
-### Modo guiado e registro de progresso
-
-- O modo guiado estará disponível apenas no tutorial inicial, com opção de sair permanentemente.
-- O sistema registrará o progresso do usuário, permitindo acompanhar o avanço no aprendizado.
-
-### Comunidade e feedback
-
-- Espaço para usuários darem feedback, sugestões e reportar bugs.
-- As contribuições serão avaliadas para manter o foco e qualidade do projeto.
+Munux is more than software. It is a technical and philosophical learning environment about how machines truly think.
 
 ---
 
-## ⚙️ Licença
+## ⚙️ The "Learning OS" Concept (Planned Features)
 
-Este projeto está licenciado sob a [GNU General Public License v3.0 (GPLv3)](LICENSE).
+Munux aims to implement a unique "Gamified Permission System" in its user space:
 
----
+### Progressive Learning Levels
 
-## 📌 Status atual
+The system implements five progressive levels that unlock permissions and advanced commands:
 
-O projeto alcançou um marco significativo com a **versão 0.2**. O kernel agora possui todos os subsistemas fundamentais implementados e funcionais:
+| Level | Role | Permissions & Restrictions | Safety |
+|:---:|:---:|---|---|
+| **1** | **Beginner** | Restricted access, basic commands only | Constant warnings & Guidance |
+| **2** | **Apprentice** | More commands unlocked | Warnings before critical actions |
+| **3** | **User** | Access to intermediate technical tools | Standard safety checks |
+| **4** | **Power User** | Minimal restrictions | No warnings |
+| **5** | **Kernel Hacker** | Full control, direct hardware access | **God Mode** (You can break everything) |
 
-### ✅ Implementado (Nível 1 Completo)
+### Interactive Terminal & Testing
 
-**Sistema de Interrupções**
-- IDT completa com 256 entradas
-- Handlers para todas as exceções do processador
-- Gerenciamento de IRQs de hardware
-- Reprogramação do PIC
-
-**Gerenciamento de Memória**
-- Gerenciador de memória física (PMM) com alocação baseada em bitmap
-- Gerenciador de memória virtual (VMM) com paginação completa
-- Heap allocator com malloc/free
-- Proteção de memória e isolamento
-
-**Gerenciamento de Processos**
-- Process Control Block (PCB) completo
-- Scheduler round-robin com 4 níveis de prioridade
-- Multitasking preemptivo
-- Context switching em assembly otimizado
-
-**Drivers de Dispositivos**
-- Timer (PIT) para agendamento e contagem de tempo
-- Teclado PS/2 completo com layout ABNT2
-- Mouse PS/2 com suporte a 3 botões
-- Porta serial para debug
-- Controlador de disco ATA/IDE
-
-### 📋 Próximos Passos
-
-**Fase 2 - Serviços do Sistema** (Em Planejamento)
-- Virtual File System (VFS)
-- Sistema de arquivos ext2
-- Biblioteca C padrão
-- Interface de system calls
-- Separação de modo usuário/kernel
-
-Acompanhe o desenvolvimento detalhado em `docs/ROADMAP.md`.
+- **Integrated Tutorials**: A VS Code-style sidebar in the terminal explaining commands in real-time.
+- **Skill Checks**: Practical challenges directly in the terminal to "level up."
+- **Anti-Cheat**: Logic to ensure the user is actually learning, not just copy-pasting.
 
 ---
 
-## ✨ Criado por
+## 🗺️ Kernel Architecture at a Glance
 
-Munique Alves Pacheco Feitoza  
-[LinkedIn](https://www.linkedin.com/in/munique-feitoza-77034b231/) • [GitHub](https://github.com/Munique-Feitoza/)
+The diagram below (Mermaid / UML) summarizes how Munux subsystems are wired together. GitHub renders it natively — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full component and boot-sequence diagrams.
+
+```mermaid
+flowchart TB
+    HW[("x86 Hardware<br/>CPU · PIC · PIT · KBD · Mouse · IDE · COM · RAM")]
+    BOOT[Bootloader + Multiboot]
+    IDT[Interrupts<br/>IDT / ISR / IRQ]
+    MEM[Memory<br/>PMM → VMM → Heap]
+    DRV[Drivers<br/>timer · kbd · mouse · serial · disk]
+    PROC[Processes<br/>PCB + Round-Robin Scheduler]
+    MAIN([kernel_main])
+
+    HW --> BOOT --> MAIN
+    MAIN --> IDT
+    MAIN --> MEM
+    MAIN --> DRV
+    MAIN --> PROC
+    DRV --> IDT
+    PROC --> MEM
+    DRV --> HW
+```
+
+## 📌 Technical Status: Version 0.2
+
+The project has reached a significant milestone. The **Munux Kernel** core is functional with all fundamental subsystems implemented in C and Assembly.
+
+### ✅ Implemented (Level 1 Complete)
+
+**Interrupt System**
+- Complete IDT with 256 entries
+- Handlers for all 32 CPU exceptions
+- Hardware IRQ management (remapped PIC)
+- Assembly stubs for context saving
+
+**Memory Management**
+- **PMM**: Physical Memory Manager with bitmap allocation
+- **VMM**: Virtual Memory Manager with paging (Two-level page tables)
+- **Heap**: Kernel heap allocator (malloc/free)
+- Memory protection and isolation
+
+**Process Management**
+- Complete Process Control Block (PCB) structure
+- Round-robin scheduler with 4 priority levels
+- Preemptive multitasking
+- Optimized Context Switching in Assembly
+
+**Device Drivers**
+- **Timer**: PIT (Programmable Interval Timer) for scheduling
+- **Input**: PS/2 Keyboard (ABNT2 layout) & PS/2 Mouse (3 buttons)
+- **Debug**: Serial Port driver for logging
+- **Storage**: ATA/IDE Disk Controller (PIO Mode)
+
+### 📋 Roadmap
+
+**Phase 2 - System Services** (Current Focus)
+- Virtual File System (VFS) abstraction
+- Ext2 file system implementation
+- Standard C Library
+- System Calls interface
+- User Mode (Ring 3) separation
+
+*See [docs/ROADMAP.md](docs/ROADMAP.md) for the detailed development plan.*
+
+---
+
+## 📚 Documentation
+
+We believe documentation is as important as code. Explore the Munux architecture:
+
+- **[BUILD.md](docs/BUILD.md)**: How to compile and run Munux
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System design overview
+- **[MEMORY.md](docs/MEMORY.md)**: How PMM, VMM and Heap work
+- **[PROCESSES.md](docs/PROCESSES.md)**: Scheduling and Multitasking internals
+- **[INTERRUPTS.md](docs/INTERRUPTS.md)**: IDT and Exception handling
+- **[DRIVERS.md](docs/DRIVERS.md)**: Timer, keyboard, mouse, serial and ATA drivers
+- **[INDEX.md](docs/INDEX.md)**: Full documentation index (with UML diagrams)
+
+---
+
+## ⚖️ License
+
+This project is licensed under the [GNU General Public License v3.0 (GPLv3)](LICENSE).
+
+---
+
+## ✨ Authorship
+
+Created and maintained by **Munique Alves Pacheco Feitoza**.
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat&logo=linkedin)](https://www.linkedin.com/in/munique-feitoza-77034b231/)
+[![GitHub](https://img.shields.io/badge/GitHub-Follow-black?style=flat&logo=github)](https://github.com/Munique-Feitoza/)

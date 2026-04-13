@@ -2,6 +2,8 @@
 
 Welcome to the Munux operating system documentation. This comprehensive guide covers every aspect of the kernel implementation, from high-level architecture to low-level implementation details.
 
+> 📐 **UML diagrams**: Every core subsystem document now ships with Mermaid-based UML diagrams (component, class, sequence, state and activity). They render natively on GitHub — no tooling required. If you are reading locally, any Markdown viewer that supports Mermaid (VS Code with the Markdown Preview Mermaid extension, Obsidian, Typora, etc.) will display them.
+
 ## Getting Started
 
 New to Munux? Start here:
@@ -41,6 +43,19 @@ Complete guide to building, running, testing, and debugging Munux. Includes tool
 
 **[API.md](API.md)**  
 Comprehensive kernel API reference. Every function, structure, and constant documented with usage examples.
+
+## UML Diagram Map
+
+Quick jump-list of the diagrams added across the documentation:
+
+| Document | Diagrams |
+|---|---|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Component diagram (kernel ↔ hardware) · Boot sequence |
+| [MEMORY.md](MEMORY.md) | Class diagram (PMM/VMM/Heap) · Heap-expansion sequence · Address-translation activity |
+| [PROCESSES.md](PROCESSES.md) | Class diagram (PCB/Scheduler) · Process state machine · Context-switch sequence |
+| [INTERRUPTS.md](INTERRUPTS.md) | IDT vector layout · Interrupt lifecycle sequence · Exception/IRQ dispatch activity |
+| [DRIVERS.md](DRIVERS.md) | Driver component diagram · Keyboard IRQ sequence |
+| [README.md](../README.md) | Kernel-at-a-glance overview diagram |
 
 ## Documentation by Topic
 
