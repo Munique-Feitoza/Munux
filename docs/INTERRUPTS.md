@@ -4,6 +4,68 @@
 
 Interrupts are the primary mechanism for hardware communication and exception handling in x86 systems. They allow external devices to signal the CPU and enable the processor to handle error conditions.
 
+## UML Overview — IDT Vector Layout
+
+```mermaid
+flowchart LR
+    subgraph IDT["IDT · 256 entries"]
+        E["0..31<br/>CPU Exceptions"]
+        I["32..47<br/>Hardware IRQs (remapped)"]
+        S["48..255<br/>Software / reserved"]
+    end
+    CPU[/CPU Exception/] --> E
+    PIC8259[/8259 PIC<br/>IRQ 0..15/] --> I
+    SWINT[/INT n software/] --> S
+    E --> EH[Exception Handlers]
+    I --> IH[IRQ Handlers]
+    S --> SH[Future syscalls]
+```
+
+## UML Sequence — Interrupt Lifecycle (IRQ path)
+
+Flow from a hardware event (e.g. keyboard keypress) through the assembly stub down to a registered driver handler.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant HW as Device (e.g. KBD)
+    participant PIC as 8259 PIC
+    participant CPU
+    participant Stub as isrN (asm stub)
+    participant Common as isr_common_stub
+    participant Disp as irq_handler (C)
+    participant H as Registered Handler
+
+    HW->>PIC: assert IRQ line
+    PIC->>CPU: INTR (vector = 32+n)
+    CPU->>Stub: lookup IDT, jump
+    Stub->>Stub: push int_no, err_code
+    Stub->>Common: jmp
+    Common->>Common: pusha, save segs, load kdata
+    Common->>Disp: call irq_handler(regs)
+    Disp->>PIC: EOI (0x20 / 0xA0+0x20)
+    Disp->>H: handlers[int_no](regs)
+    H-->>Disp: return
+    Disp-->>Common: return
+    Common->>Common: restore segs, popa
+    Common->>CPU: iret
+    CPU-->>HW: resume interrupted code
+```
+
+## UML Activity — Exception vs IRQ Dispatch
+
+```mermaid
+flowchart TD
+    Start([Interrupt raised]) --> Vec{int_no}
+    Vec -- "< 32" --> Ex[Exception handler<br/>log / kill process]
+    Vec -- "32..47" --> IRQ{IRQ}
+    IRQ -- "registered" --> Call[Call driver handler]
+    IRQ -- "not registered" --> Noop[Do nothing]
+    Ex --> Eoi1[return via iret]
+    Call --> Eoi2[Send EOI → iret]
+    Noop --> Eoi2
+```
+
 ## Interrupt Descriptor Table (IDT)
 
 ### Structure

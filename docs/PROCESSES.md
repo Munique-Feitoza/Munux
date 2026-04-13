@@ -4,6 +4,90 @@
 
 Munux implements full preemptive multitasking, allowing multiple processes to share the CPU through rapid context switching. This creates the illusion of parallelism even on single-core systems.
 
+## UML Class Diagram — PCB and Scheduler
+
+```mermaid
+classDiagram
+    class PCB {
+        +uint32_t pid
+        +char name[32]
+        +state_t state
+        +priority_t priority
+        +context_t context
+        +uint32_t* kernel_stack
+        +uint32_t* user_stack
+        +page_directory_t* page_dir
+        +uint32_t quantum
+        +uint32_t cpu_time
+        +PCB* parent
+        +PCB* next
+    }
+
+    class Context {
+        +uint32_t eax,ebx,ecx,edx
+        +uint32_t esi,edi,ebp
+        +uint32_t esp,eip
+        +uint32_t eflags
+        +uint32_t cr3
+    }
+
+    class Scheduler {
+        -PCB* ready_queues[4]
+        -PCB* current
+        +schedule()
+        +enqueue(PCB*)
+        +dequeue(priority) PCB*
+        +on_tick()
+    }
+
+    PCB "1" *-- "1" Context
+    Scheduler "1" o-- "many" PCB : ready queues
+    Scheduler --> PCB : current
+```
+
+## UML State Diagram — Process Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> READY : process_create()
+    READY --> RUNNING : schedule()
+    RUNNING --> READY : quantum expired
+    RUNNING --> BLOCKED : wait I/O / event
+    BLOCKED --> READY : I/O completes
+    RUNNING --> TERMINATED : exit() / killed
+    BLOCKED --> TERMINATED : signal
+    READY --> TERMINATED : signal
+    TERMINATED --> [*]
+```
+
+## UML Sequence — Timer-Driven Context Switch
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant PIT
+    participant ISR as IRQ0 stub
+    participant Disp as irq_handler
+    participant TMR as timer_callback
+    participant S as scheduler
+    participant SW as switch_to (asm)
+
+    PIT->>ISR: IRQ0 raise
+    ISR->>Disp: save regs, call dispatcher
+    Disp->>TMR: timer_callback(regs)
+    TMR->>TMR: ticks++; current->quantum--
+    alt quantum > 0
+        TMR-->>Disp: return
+    else quantum == 0
+        TMR->>S: schedule()
+        S->>S: enqueue(current)
+        S->>S: pick highest non-empty prio queue
+        S->>SW: switch_to(old_ctx, new_ctx)
+        SW-->>S: ret as new process
+    end
+    Disp->>ISR: EOI to PIC, iret
+```
+
 ## Process Control Block (PCB)
 
 ### Structure

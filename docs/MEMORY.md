@@ -4,6 +4,98 @@
 
 The Munux memory management subsystem provides three distinct layers of abstraction: physical frame allocation, virtual memory paging, and heap allocation. This layered approach separates concerns while providing efficient memory utilization.
 
+## UML Class Diagram — Memory Subsystem
+
+The three managers are decoupled but layered. The heap consumes pages from the VMM, which maps them onto frames provided by the PMM.
+
+```mermaid
+classDiagram
+    class PMM {
+        -uint32_t* bitmap
+        -uint32_t total_frames
+        -uint32_t used_frames
+        +pmm_init()
+        +pmm_alloc_frame() uint32_t
+        +pmm_free_frame(addr)
+        +pmm_get_free_memory() uint32_t
+    }
+
+    class VMM {
+        -page_directory_t* kernel_dir
+        +vmm_init()
+        +vmm_map(virt, phys, flags)
+        +vmm_unmap(virt)
+        +vmm_switch_directory(pd)
+    }
+
+    class Heap {
+        -block_t* head
+        -uint32_t heap_start
+        -uint32_t heap_end
+        +kmalloc(size) void*
+        +kfree(ptr)
+        -expand(size)
+        -coalesce()
+    }
+
+    class Block {
+        +uint32_t size
+        +uint8_t  free
+        +Block*   next
+    }
+
+    Heap --> VMM : maps new pages
+    Heap --> PMM : backs pages with frames
+    VMM  --> PMM : page-table frames
+    Heap "1" o-- "many" Block : linked list
+```
+
+## UML Sequence — Page Fault & Heap Expansion
+
+When `kmalloc` cannot satisfy a request from the existing free list, it expands the heap by asking the VMM to map new virtual pages backed by PMM frames.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Caller as Kernel Code
+    participant H as Heap
+    participant V as VMM
+    participant P as PMM
+    Caller->>H: kmalloc(size)
+    H->>H: first-fit walk
+    alt free block found
+        H-->>Caller: ptr (data area)
+    else no suitable block
+        H->>V: map pages [heap_end .. heap_end+N]
+        loop N times
+            V->>P: pmm_alloc_frame()
+            P-->>V: phys_addr
+            V->>V: install PDE/PTE (present,rw)
+        end
+        V-->>H: OK
+        H->>H: new free block + coalesce
+        H-->>Caller: ptr
+    end
+```
+
+## UML Activity — Virtual→Physical Translation
+
+```mermaid
+flowchart LR
+    A[Virtual Address] --> B[bits 22-31<br/>PD index]
+    A --> C[bits 12-21<br/>PT index]
+    A --> D[bits 0-11<br/>offset]
+    B --> PD{PDE present?}
+    PD -- no --> PF[Page Fault]
+    PD -- yes --> PT{PTE present?}
+    C --> PT
+    PT -- no --> PF
+    PT -- yes --> Frame[Physical frame addr]
+    Frame --> Add((+))
+    D --> Add
+    Add --> Phys[Physical Address]
+```
+
 ## Physical Memory Manager (PMM)
 
 ### Design Philosophy

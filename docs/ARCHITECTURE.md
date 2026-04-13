@@ -6,6 +6,53 @@ Munux is a modern, educational operating system designed from the ground up to p
 
 The project philosophy centers on transparency and comprehension - every component is designed to be understandable while maintaining production-quality code standards.
 
+## System Overview (UML Component Diagram)
+
+The diagram below shows the top-level kernel components and the dependencies between them. Arrows point from consumer to provider — e.g. the Heap depends on the VMM, which in turn depends on the PMM.
+
+```mermaid
+flowchart TB
+    subgraph HW["Hardware (x86)"]
+        CPU["CPU / MMU"]
+        PIC["8259 PIC"]
+        PIT["PIT Timer"]
+        KBD["PS/2 Keyboard"]
+        MOUSE["PS/2 Mouse"]
+        IDE["ATA/IDE Disk"]
+        COM["Serial Port"]
+        RAM["Physical RAM"]
+    end
+
+    subgraph KERNEL["Munux Kernel (Ring 0)"]
+        BOOT["Bootloader + Multiboot"]
+        IDT["Interrupt Subsystem<br/>(IDT + ISR + IRQ)"]
+        PMM["PMM<br/>(Bitmap Frame Allocator)"]
+        VMM["VMM<br/>(Paging / Page Directory)"]
+        HEAP["Heap<br/>(First-fit + Coalescing)"]
+        PROC["Process Subsystem<br/>(PCB + Scheduler)"]
+        DRV["Device Drivers<br/>(timer / kbd / mouse / disk / serial)"]
+        MAIN["kernel_main"]
+    end
+
+    BOOT --> MAIN
+    MAIN --> IDT
+    MAIN --> PMM
+    PMM --> VMM
+    VMM --> HEAP
+    MAIN --> DRV
+    MAIN --> PROC
+    PROC --> HEAP
+    DRV --> IDT
+    IDT --> PIC
+    DRV --> PIT
+    DRV --> KBD
+    DRV --> MOUSE
+    DRV --> IDE
+    DRV --> COM
+    VMM --> CPU
+    PMM --> RAM
+```
+
 ## Architecture
 
 Munux follows a monolithic kernel architecture where all core services (memory management, process scheduling, device drivers) run in kernel mode with full hardware access. This design choice prioritizes performance and learning clarity over the isolation benefits of microkernel architectures.
@@ -42,6 +89,34 @@ The kernel uses a carefully planned memory layout to avoid conflicts and maximiz
 Physical memory is managed in 4KB pages, with the first 2MB reserved for kernel use. Virtual memory enables each process to have its own address space while sharing kernel code.
 
 ## Boot Process
+
+The following UML sequence diagram shows the ordered interactions between firmware, bootloader, and kernel subsystems during system startup.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant BIOS
+    participant Boot as Bootloader (0x7C00)
+    participant K as kernel_main
+    participant IDT as IDT/PIC
+    participant Mem as PMM/VMM/Heap
+    participant Drv as Drivers
+    participant Sch as Scheduler
+
+    BIOS->>Boot: Load sector 0 @0x7C00
+    Boot->>Boot: Setup stack, print banner
+    Boot->>Boot: Load kernel @0x80000
+    Boot->>Boot: Install GDT, switch to PMode
+    Boot->>K: jmp kernel_entry
+    K->>IDT: idt_init() + PIC remap (32..47)
+    K->>Mem: pmm_init() → vmm_init() → heap_init()
+    Mem->>Mem: Enable paging (CR0.PG)
+    K->>Drv: timer_init(100Hz)
+    K->>Drv: keyboard/mouse/serial/disk init
+    K->>Sch: process_init() + idle task
+    Sch-->>K: sti; await first tick
+    Note over Sch,Drv: Multitasking active
+```
 
 System initialization follows a carefully orchestrated sequence:
 

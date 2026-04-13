@@ -4,6 +4,69 @@
 
 Device drivers provide abstraction layers between hardware and kernel subsystems. Each driver encapsulates device-specific details behind a clean, consistent interface.
 
+## UML Component Diagram — Driver Layer
+
+All drivers share a common shape: an `*_init()` entry point that programs the device, an IRQ handler registered against the IDT, and (optionally) a read/write API exposed to the rest of the kernel.
+
+```mermaid
+flowchart LR
+    subgraph KAPI["Kernel API"]
+        K1[kernel_main]
+        K2[Scheduler]
+        K3[VFS / future]
+    end
+    subgraph DRV["Drivers"]
+        T["timer.c<br/>PIT 100Hz"]
+        KB["keyboard.c<br/>PS/2 ABNT2"]
+        MS["mouse.c<br/>PS/2 3-btn"]
+        SR["serial.c<br/>COM1 logging"]
+        DK["disk.c<br/>ATA PIO"]
+    end
+    subgraph IRQ["IRQ Wiring"]
+        I0[IRQ0 → vec 32]
+        I1[IRQ1 → vec 33]
+        I12[IRQ12 → vec 44]
+        I14[IRQ14 → vec 46]
+    end
+
+    K1 --> T
+    K1 --> KB
+    K1 --> MS
+    K1 --> SR
+    K1 --> DK
+    T --> I0 --> K2
+    KB --> I1
+    MS --> I12
+    DK --> I14
+    SR -.polled.-> K1
+    K3 --> DK
+```
+
+## UML Sequence — Keyboard Keypress Path
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant KBD as PS/2 Controller
+    participant PIC
+    participant IRQ1 as irq1 stub
+    participant KD as keyboard_handler
+    participant BUF as circular buffer
+    participant App as Kernel consumer
+
+    User->>KBD: press key
+    KBD->>PIC: IRQ1
+    PIC->>IRQ1: vector 33
+    IRQ1->>KD: dispatch
+    KD->>KD: inb(0x60) scancode
+    KD->>KD: translate (shift/caps/ABNT2)
+    KD->>BUF: push ASCII
+    KD->>PIC: EOI
+    App->>BUF: getchar()
+    BUF-->>App: char
+```
+
 ## Timer Driver (PIT)
 
 ### Programmable Interval Timer
