@@ -1,0 +1,25 @@
+[workspace]
+resolver = "2"
+members = [
+    "munux-rs",
+    "munux-rs-ffi",
+]
+
+[workspace.package]
+edition = "2021"
+license = "GPL-3.0-only"
+authors = ["Munique Feitoza"]
+repository = "https://github.com/Munique-Feitoza/Munux"
+publish = false
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+lto = true
+codegen-units = 1
+overflow-checks = true
+debug = true
+
+[profile.dev]
+panic = "abort"
+overflow-checks = true

@@ -1,0 +1,15 @@
+[build]
+target = "i686-unknown-none.json"
+
+[unstable]
+build-std = ["core", "alloc", "compiler_builtins"]
+build-std-features = ["compiler-builtins-mem"]
+json-target-spec = true
+
+[target.i686-unknown-none]
+rustflags = [
+    "-C", "code-model=kernel",
+    "-C", "relocation-model=static",
+    "-C", "no-redzone=yes",
+    "-D", "warnings",
+]

@@ -1,0 +1,16 @@
+[package]
+name = "munux-rs-ffi"
+version = "0.3.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "FFI shim: the only crate allowed to host unsafe code and extern \"C\" exports."
+
+[lib]
+name = "munux_rs"
+crate-type = ["staticlib"]
+
+[dependencies]
+munux-rs = { path = "../munux-rs" }

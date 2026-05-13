@@ -6,6 +6,11 @@ build/
 *.img
 *.iso
 
+# Rust build outputs
+kernel/rust/target/
+kernel/rust/**/*.rs.bk
+kernel/rust/Cargo.lock
+
 # Editor files
 *.swp
 *.swo
