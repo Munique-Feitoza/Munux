@@ -25,21 +25,30 @@ static void enable_paging(page_directory_t* dir) {
     );
 }
 
-// Inicializa VMM
+// Inicializa VMM.
+//
+// Bootstrap order: PMM must be live when this runs. The page directory
+// comes directly from a physical frame (4 KiB, naturally page-aligned)
+// because the kernel heap is not initialized yet — it depends on the
+// VMM. The pre-v0.3 code allocated the PD via `kmalloc_aligned`, which
+// silently created a chicken-and-egg between VMM and the heap; this
+// was harmless only because `kernel_main` never actually called these
+// init functions. Fixed as part of v0.3 wrap-up.
 void vmm_init(void) {
-    // Aloca page directory
-    kernel_directory = (page_directory_t*)kmalloc_aligned(sizeof(page_directory_t));
+    uint32_t pd_phys = pmm_alloc_frame();
+    kernel_directory = (page_directory_t*)pd_phys;
     memset(kernel_directory, 0, sizeof(page_directory_t));
-    
-    // Mapeia identicamente os primeiros 8MB (kernel)
+
+    // current_directory must point at the new PD before the first
+    // map_page call, so on-demand page-table allocation works.
+    current_directory = kernel_directory;
     for (uint32_t i = 0; i < 0x800000; i += PAGE_SIZE) {
         vmm_map_page(i, i, PAGE_PRESENT | PAGE_WRITE);
     }
-    
-    // Mapeia memória de vídeo
+
+    // VGA framebuffer
     vmm_map_page(0xB8000, 0xB8000, PAGE_PRESENT | PAGE_WRITE);
-    
-    current_directory = kernel_directory;
+
     enable_paging(kernel_directory);
 }
 
