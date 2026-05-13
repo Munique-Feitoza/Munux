@@ -1,102 +1,106 @@
 /*
  * Munux Kernel - Physical Memory Manager
- * 
- * Gerencia frames de memória física usando bitmap.
+ *
+ * Bitmap-based frame allocator. One bit per 4 KiB frame.
  */
 
 #include "memory.h"
 
-// Bitmap para frames de memória (1 bit = 1 frame de 4KB)
-static uint32_t* frame_bitmap = (uint32_t*)0x100000; // 1MB
+// Bitmap placement: chosen to land inside the multiboot section's
+// 4 KiB page (which is otherwise pure padding after the 12-byte header
+// at link time). When memory discovery moves to multiboot info in v0.4
+// the bitmap will move into .bss with an appropriate size bound.
+#define BITMAP_BASE_ADDR    0x100000u
+#define BITS_PER_WORD       32u
+
+// Reserved low memory (kernel image + bitmap page + early data).
+#define KERNEL_RESERVED     0x200000u
+
+#define FRAMES_NOT_FOUND    ((uint32_t)-1)
+
+static uint32_t* const frame_bitmap = (uint32_t*)BITMAP_BASE_ADDR;
 static uint32_t total_frames = 0;
-static uint32_t used_frames = 0;
+static uint32_t used_frames  = 0;
 
-// Macros para manipular bitmap
-#define FRAME_INDEX(addr) ((addr) / PAGE_SIZE)
-#define FRAME_OFFSET(addr) ((addr) % PAGE_SIZE)
-#define BITMAP_INDEX(frame) ((frame) / 32)
-#define BITMAP_OFFSET(frame) ((frame) % 32)
-
-// Marca um frame como usado
-static void set_frame(uint32_t frame_addr) {
-    uint32_t frame = FRAME_INDEX(frame_addr);
-    uint32_t idx = BITMAP_INDEX(frame);
-    uint32_t off = BITMAP_OFFSET(frame);
-    frame_bitmap[idx] |= (1 << off);
+static inline uint32_t addr_to_frame(uint32_t addr) {
+    return addr / PAGE_SIZE;
 }
 
-// Marca um frame como livre
-static void clear_frame(uint32_t frame_addr) {
-    uint32_t frame = FRAME_INDEX(frame_addr);
-    uint32_t idx = BITMAP_INDEX(frame);
-    uint32_t off = BITMAP_OFFSET(frame);
-    frame_bitmap[idx] &= ~(1 << off);
+static inline uint32_t bitmap_words(void) {
+    return (total_frames + BITS_PER_WORD - 1) / BITS_PER_WORD;
 }
 
-// Verifica se frame está sendo usado
-static uint32_t test_frame(uint32_t frame_addr) {
-    uint32_t frame = FRAME_INDEX(frame_addr);
-    uint32_t idx = BITMAP_INDEX(frame);
-    uint32_t off = BITMAP_OFFSET(frame);
-    return frame_bitmap[idx] & (1 << off);
+static inline void mark_frame_used(uint32_t frame) {
+    frame_bitmap[frame / BITS_PER_WORD] |= 1u << (frame % BITS_PER_WORD);
 }
 
-// Encontra primeiro frame livre
-static uint32_t first_free_frame(void) {
-    for (uint32_t i = 0; i < total_frames / 32; i++) {
-        if (frame_bitmap[i] != 0xFFFFFFFF) {
-            for (uint32_t j = 0; j < 32; j++) {
-                if (!(frame_bitmap[i] & (1 << j))) {
-                    return i * 32 + j;
-                }
+static inline void mark_frame_free(uint32_t frame) {
+    frame_bitmap[frame / BITS_PER_WORD] &= ~(1u << (frame % BITS_PER_WORD));
+}
+
+// Returns FRAMES_NOT_FOUND when the bitmap is fully allocated.
+static uint32_t find_free_frame(void) {
+    const uint32_t words = bitmap_words();
+    for (uint32_t w = 0; w < words; w++) {
+        const uint32_t word = frame_bitmap[w];
+        if (word == 0xFFFFFFFFu) {
+            continue;
+        }
+        for (uint32_t bit = 0; bit < BITS_PER_WORD; bit++) {
+            if (!(word & (1u << bit))) {
+                return w * BITS_PER_WORD + bit;
             }
         }
     }
-    return (uint32_t)-1; // Sem frames livres
+    return FRAMES_NOT_FOUND;
 }
 
-// Inicializa o gerenciador de memória física
 void pmm_init(uint32_t mem_size) {
     total_frames = mem_size / PAGE_SIZE;
-    
-    // Zera bitmap
-    for (uint32_t i = 0; i < total_frames / 32; i++) {
-        frame_bitmap[i] = 0;
+
+    // Zero the whole bitmap in one pass.
+    const uint32_t words = bitmap_words();
+    for (uint32_t w = 0; w < words; w++) {
+        frame_bitmap[w] = 0;
     }
-    
-    // Marca primeiros 2MB como usados (kernel + bitmap)
-    for (uint32_t i = 0; i < 0x200000; i += PAGE_SIZE) {
-        set_frame(i);
-        used_frames++;
+
+    // Bulk-set the first KERNEL_RESERVED bytes worth of frames as used.
+    // Setting whole words is O(reserved / PAGE_SIZE / BITS_PER_WORD)
+    // instead of a per-frame bit-twiddle loop.
+    const uint32_t reserved_frames = KERNEL_RESERVED / PAGE_SIZE;
+    const uint32_t full_words      = reserved_frames / BITS_PER_WORD;
+    const uint32_t tail_bits       = reserved_frames % BITS_PER_WORD;
+
+    for (uint32_t w = 0; w < full_words; w++) {
+        frame_bitmap[w] = 0xFFFFFFFFu;
     }
+    if (tail_bits) {
+        frame_bitmap[full_words] = (1u << tail_bits) - 1u;
+    }
+    used_frames = reserved_frames;
 }
 
-// Aloca um frame físico
 uint32_t pmm_alloc_frame(void) {
-    uint32_t frame = first_free_frame();
-    if (frame == (uint32_t)-1) {
-        return 0; // Sem memória
+    const uint32_t frame = find_free_frame();
+    if (frame == FRAMES_NOT_FOUND) {
+        return 0; // 0 doubles as "out of memory" since frame 0 is reserved.
     }
-    
-    set_frame(frame * PAGE_SIZE);
+    mark_frame_used(frame);
     used_frames++;
     return frame * PAGE_SIZE;
 }
 
-// Libera um frame físico
 void pmm_free_frame(uint32_t frame_addr) {
-    clear_frame(frame_addr);
+    mark_frame_free(addr_to_frame(frame_addr));
     if (used_frames > 0) {
         used_frames--;
     }
 }
 
-// Retorna memória total
 uint32_t pmm_get_total_memory(void) {
     return total_frames * PAGE_SIZE;
 }
 
-// Retorna memória livre
 uint32_t pmm_get_free_memory(void) {
     return (total_frames - used_frames) * PAGE_SIZE;
 }
