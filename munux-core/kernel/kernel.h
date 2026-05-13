@@ -54,4 +54,9 @@ size_t strlen(const char* str);
 // Função principal do kernel
 void kernel_main(void);
 
+// Caminho de pânico — chamado tanto pelo lado C quanto pelo
+// `#[panic_handler]` da camada Rust.
+__attribute__((noreturn))
+void kernel_panic(const char* msg);
+
 #endif // KERNEL_H

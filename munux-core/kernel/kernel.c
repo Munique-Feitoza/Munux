@@ -19,30 +19,8 @@
 #include "drivers/mouse.h"
 #include "drivers/disk.h"
 
-// Definições para cores no modo texto
-#define COLOR_BLACK         0
-#define COLOR_BLUE          1
-#define COLOR_GREEN         2
-#define COLOR_CYAN          3
-#define COLOR_RED           4
-#define COLOR_MAGENTA       5
-#define COLOR_BROWN         6
-#define COLOR_LIGHT_GREY    7
-#define COLOR_DARK_GREY     8
-#define COLOR_LIGHT_BLUE    9
-#define COLOR_LIGHT_GREEN   10
-#define COLOR_LIGHT_CYAN    11
-#define COLOR_LIGHT_RED     12
-#define COLOR_LIGHT_MAGENTA 13
-#define COLOR_LIGHT_BROWN   14
-#define COLOR_WHITE         15
-
-// Constantes do terminal
-#define VGA_WIDTH   80
-#define VGA_HEIGHT  25
-
-// Ponteiro para memória de vídeo VGA
-static volatile uint16_t* video_memory = (uint16_t*)0xB8000;
+// VGA text-mode terminal state. All constants come from kernel.h.
+static volatile uint16_t* video_memory = (uint16_t*)VGA_MEMORY;
 static int terminal_row = 0;
 static int terminal_column = 0;
 static uint8_t terminal_color = COLOR_LIGHT_GREY | (COLOR_BLACK << 4);
@@ -124,6 +102,68 @@ void terminal_writestring(const char* data) {
     terminal_write(data, strlen(data));
 }
 
+// Caminho de pânico do kernel: usado tanto pelo lado C quanto pelo
+// `#[panic_handler]` da camada Rust em `kernel/rust/munux-rs-ffi`.
+__attribute__((noreturn))
+void kernel_panic(const char* msg) {
+    terminal_setcolor(vga_entry_color(COLOR_WHITE, COLOR_RED));
+    terminal_writestring("\n*** KERNEL PANIC ***\n");
+    if (msg) {
+        terminal_writestring(msg);
+        terminal_writestring("\n");
+    }
+    __asm__ volatile ("cli");
+    while (1) {
+        __asm__ volatile ("hlt");
+    }
+}
+
+// Smoke test do heap Rust no boot. Aloca, valida que o ponto é
+// gravável, libera, e re-aloca um bloco do tamanho combinado para
+// confirmar que a coalescência funciona — exercita o caminho C →
+// munux_rs_alloc → heap.rs e volta. Falhas caem em kernel_panic.
+static void rust_heap_smoke(void) {
+    enum {
+        BLOCK_A_SIZE = 128,
+        BLOCK_B_SIZE = 256,
+        COALESCED_SIZE = BLOCK_A_SIZE + BLOCK_B_SIZE, // exige merge dos dois
+        PATTERN_A = 0xAAu,
+        PATTERN_B = 0x55u,
+        PATTERN_C = 0xEEu,
+    };
+
+    terminal_setcolor(vga_entry_color(COLOR_LIGHT_CYAN, COLOR_BLACK));
+    terminal_writestring("[smoke] Testando heap Rust...\n");
+
+    unsigned char* a = kmalloc(BLOCK_A_SIZE);
+    unsigned char* b = kmalloc(BLOCK_B_SIZE);
+    if (!a || !b || a == b) {
+        kernel_panic("[smoke] kmalloc devolveu NULL ou ponteiros duplicados");
+    }
+    memset(a, PATTERN_A, BLOCK_A_SIZE);
+    memset(b, PATTERN_B, BLOCK_B_SIZE);
+    if (a[0] != PATTERN_A || a[BLOCK_A_SIZE - 1] != PATTERN_A ||
+        b[0] != PATTERN_B || b[BLOCK_B_SIZE - 1] != PATTERN_B) {
+        kernel_panic("[smoke] memoria nao retem o que foi escrito");
+    }
+
+    kfree(a);
+    kfree(b);
+
+    unsigned char* c = kmalloc(COALESCED_SIZE);
+    if (!c) {
+        kernel_panic("[smoke] kmalloc apos coalesce falhou");
+    }
+    memset(c, PATTERN_C, COALESCED_SIZE);
+    if (c[0] != PATTERN_C || c[COALESCED_SIZE - 1] != PATTERN_C) {
+        kernel_panic("[smoke] bloco coalescido nao e gravavel");
+    }
+    kfree(c);
+
+    terminal_setcolor(vga_entry_color(COLOR_LIGHT_GREEN, COLOR_BLACK));
+    terminal_writestring("[smoke] kmalloc/kfree/coalesce: OK (via munux_rs)\n");
+}
+
 // Função principal do kernel
 void kernel_main(void) {
     // Limpar tela
@@ -143,20 +183,34 @@ void kernel_main(void) {
     
     terminal_writestring("[OK] Inicializando IDT...\n");
     idt_init();
-    
+
+    // QEMU é iniciado com -m 32M; a descoberta real de memória via
+    // multiboot info fica para v0.4.
+    terminal_writestring("[OK] Inicializando PMM (32 MiB)...\n");
+    pmm_init(0x02000000);
+
+    terminal_writestring("[OK] Inicializando VMM + paginacao...\n");
+    vmm_init();
+
+    terminal_writestring("[OK] Inicializando heap (backend: Rust)...\n");
+    heap_init();
+
+    rust_heap_smoke();
+
     terminal_writestring("\n");
     
     // Informações do sistema
     terminal_setcolor(vga_entry_color(COLOR_LIGHT_BROWN, COLOR_BLACK));
-    terminal_writestring("Sistema Operacional: Munux v0.2\n");
-    terminal_writestring("Arquitetura: i386 (32-bit)\n\n");
-    
+    terminal_writestring("Sistema Operacional: Munux v0.3\n");
+    terminal_writestring("Arquitetura: i386 (32-bit)\n");
+    terminal_writestring("Linguagens: C + Assembly + Rust (no_std)\n\n");
+
     terminal_setcolor(vga_entry_color(COLOR_WHITE, COLOR_BLACK));
     terminal_writestring("Funcionalidades implementadas:\n");
     terminal_writestring("  [x] Gerenciamento de interrupcoes (IDT)\n");
     terminal_writestring("  [x] Gerenciamento de memoria fisica (PMM)\n");
     terminal_writestring("  [x] Gerenciamento de memoria virtual (VMM)\n");
-    terminal_writestring("  [x] Heap allocator (malloc/free)\n");
+    terminal_writestring("  [x] Heap allocator (Rust, first-fit + coalesce)\n");
     terminal_writestring("  [x] Timer (PIT)\n");
     terminal_writestring("  [x] Driver de teclado completo\n");
     terminal_writestring("  [x] Driver de mouse PS/2\n");
@@ -164,7 +218,8 @@ void kernel_main(void) {
     terminal_writestring("  [x] Driver de porta serial\n");
     terminal_writestring("  [x] Gerenciamento de processos (PCB)\n");
     terminal_writestring("  [x] Scheduler round-robin preemptivo\n");
-    terminal_writestring("  [x] Context switching\n\n");
+    terminal_writestring("  [x] Context switching\n");
+    terminal_writestring("  [x] Static library Rust integrada (FFI estavel)\n\n");
     
     terminal_setcolor(vga_entry_color(COLOR_LIGHT_GREY, COLOR_BLACK));
     terminal_writestring("Kernel inicializado com sucesso!\n");

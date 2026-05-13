@@ -1,152 +1,115 @@
 /*
- * Munux Kernel - Heap Allocator
- * 
- * Implementação de malloc/free para o kernel.
- * Usa algoritmo First-Fit com lista encadeada de blocos livres.
+ * Munux Kernel - Heap Allocator (C bootstrap + Rust backend)
+ *
+ * Since v0.3 the heap free-list and allocation logic live in Rust
+ * (`kernel/rust/munux-rs/src/heap.rs`). This file keeps the parts that
+ * unavoidably touch C-side machinery — the initial page mapping via
+ * PMM/VMM and the grow callback — and forwards `kmalloc` / `kfree` to
+ * the Rust static library.
+ *
+ * The public API (kmalloc/kmalloc_aligned/kmalloc_physical/kfree)
+ * is preserved byte-for-byte so existing call sites are unaffected.
  */
 
 #include "memory.h"
+#include "munux_rs.h"
 
-// Endereço inicial do heap
-#define HEAP_START 0xC0000000
-#define HEAP_INITIAL_SIZE 0x100000 // 1MB inicial
+// Layout: identical to the pre-v0.3 C heap so any external tooling
+// (debugger scripts, doc references) keeps working unchanged.
+#define HEAP_START         0xC0000000
+#define HEAP_INITIAL_SIZE  0x00100000  // 1 MiB
+#define HEAP_MAX_SIZE      0x10000000  // 256 MiB
 
-// Bloco de memória
-typedef struct heap_block {
-    size_t size;
-    uint32_t is_free;
-    struct heap_block* next;
-} heap_block_t;
-
-// Cabeça da lista de blocos
-static heap_block_t* heap_start = 0;
-static uint32_t heap_end = 0;
-static uint32_t heap_max = 0;
-
-// Alinhamento
 #define ALIGN(x, a) (((x) + (a) - 1) & ~((a) - 1))
 
-// Inicializa o heap
+static uint32_t heap_end = 0;
+static uint32_t heap_max_addr = 0;
+
+// Maps `[from, to)` writable into the kernel address space.
+static void map_heap_range(uint32_t from, uint32_t to) {
+    for (uint32_t va = from; va < to; va += PAGE_SIZE) {
+        uint32_t frame = pmm_alloc_frame();
+        vmm_map_page(va, frame, PAGE_PRESENT | PAGE_WRITE);
+    }
+}
+
+// IRQ save/restore callbacks consumed by the Rust IrqMutex.
+// These are deliberately small and self-contained so the only
+// FFI dependency of `munux-rs::sync` is a pair of trivial functions.
+uint32_t munux_c_irq_save(void) {
+    uint32_t flags;
+    __asm__ volatile (
+        "pushfl\n\t"
+        "popl %0\n\t"
+        "cli"
+        : "=r"(flags)
+        :
+        : "memory"
+    );
+    return flags;
+}
+
+void munux_c_irq_restore(uint32_t flags) {
+    __asm__ volatile (
+        "pushl %0\n\t"
+        "popfl"
+        :
+        : "r"(flags)
+        : "memory", "cc"
+    );
+}
+
 void heap_init(void) {
-    heap_start = (heap_block_t*)HEAP_START;
     heap_end = HEAP_START + HEAP_INITIAL_SIZE;
-    heap_max = HEAP_START + 0x10000000; // 256MB máximo
-    
-    // Cria bloco inicial
-    heap_start->size = HEAP_INITIAL_SIZE - sizeof(heap_block_t);
-    heap_start->is_free = 1;
-    heap_start->next = 0;
-    
-    // Mapeia memória inicial do heap
-    for (uint32_t i = HEAP_START; i < heap_end; i += PAGE_SIZE) {
-        uint32_t frame = pmm_alloc_frame();
-        vmm_map_page(i, frame, PAGE_PRESENT | PAGE_WRITE);
-    }
+    heap_max_addr = HEAP_START + HEAP_MAX_SIZE;
+
+    map_heap_range(HEAP_START, heap_end);
+
+    // Hand the region to the Rust allocator. From this point on,
+    // all allocation and free decisions are made on the Rust side.
+    munux_rs_heap_init(HEAP_START, HEAP_INITIAL_SIZE, HEAP_MAX_SIZE);
 }
 
-// Expande o heap
-static void expand_heap(size_t min_size) {
-    size_t expand_size = ALIGN(min_size, PAGE_SIZE);
-    
-    if (heap_end + expand_size > heap_max) {
-        return; // Heap no limite
+// Called from Rust when the free list runs out of space.
+// Maps additional pages and returns the new heap end (0 on failure).
+size_t munux_c_heap_grow(size_t min_bytes) {
+    size_t aligned = ALIGN(min_bytes, PAGE_SIZE);
+    uint32_t new_end = heap_end + (uint32_t)aligned;
+
+    if (new_end > heap_max_addr) {
+        return 0;
     }
-    
-    // Mapeia novas páginas
-    for (uint32_t i = heap_end; i < heap_end + expand_size; i += PAGE_SIZE) {
-        uint32_t frame = pmm_alloc_frame();
-        vmm_map_page(i, frame, PAGE_PRESENT | PAGE_WRITE);
-    }
-    
-    heap_end += expand_size;
+
+    map_heap_range(heap_end, new_end);
+    heap_end = new_end;
+    return new_end;
 }
 
-// Aloca memória (malloc)
 void* kmalloc(size_t size) {
-    if (size == 0) return 0;
-    
-    size = ALIGN(size, 4); // Alinha em 4 bytes
-    
-    heap_block_t* current = heap_start;
-    
-    // First-Fit: procura primeiro bloco livre suficiente
-    while (current) {
-        if (current->is_free && current->size >= size) {
-            // Divide bloco se sobrar espaço
-            if (current->size > size + sizeof(heap_block_t) + 16) {
-                heap_block_t* new_block = (heap_block_t*)((uint32_t)current + sizeof(heap_block_t) + size);
-                new_block->size = current->size - size - sizeof(heap_block_t);
-                new_block->is_free = 1;
-                new_block->next = current->next;
-                
-                current->size = size;
-                current->next = new_block;
-            }
-            
-            current->is_free = 0;
-            return (void*)((uint32_t)current + sizeof(heap_block_t));
-        }
-        
-        if (!current->next) {
-            // Chegou ao fim sem encontrar bloco
-            // Expande heap
-            size_t needed = size + sizeof(heap_block_t);
-            expand_heap(needed);
-            
-            heap_block_t* new_block = (heap_block_t*)(heap_end - needed);
-            new_block->size = size;
-            new_block->is_free = 0;
-            new_block->next = 0;
-            current->next = new_block;
-            
-            return (void*)((uint32_t)new_block + sizeof(heap_block_t));
-        }
-        
-        current = current->next;
-    }
-    
-    return 0;
+    return (void*)munux_rs_alloc(size);
 }
 
-// Aloca memória alinhada em página
+void kfree(void* ptr) {
+    munux_rs_free((uint8_t*)ptr);
+}
+
+// Page-aligned allocation: over-allocates and rounds up.
+// The original block header (still owned by Rust) is reachable
+// via `kfree` on the returned aligned pointer because Rust's
+// dealloc walks the list by header offset.
 void* kmalloc_aligned(size_t size) {
     void* ptr = kmalloc(size + PAGE_SIZE);
     if (!ptr) return 0;
-    
+
     uint32_t addr = (uint32_t)ptr;
     uint32_t aligned = ALIGN(addr, PAGE_SIZE);
-    
-    if (aligned != addr) {
-        return (void*)aligned;
-    }
-    
-    return ptr;
+    return (void*)aligned;
 }
 
-// Aloca memória e retorna endereço físico
 void* kmalloc_physical(size_t size, uint32_t* phys_addr) {
     void* virt = kmalloc(size);
     if (virt && phys_addr) {
         *phys_addr = vmm_get_physical_address((uint32_t)virt);
     }
     return virt;
-}
-
-// Libera memória (free)
-void kfree(void* ptr) {
-    if (!ptr) return;
-    
-    heap_block_t* block = (heap_block_t*)((uint32_t)ptr - sizeof(heap_block_t));
-    block->is_free = 1;
-    
-    // Coalescência: junta blocos livres adjacentes
-    heap_block_t* current = heap_start;
-    while (current && current->next) {
-        if (current->is_free && current->next->is_free) {
-            current->size += sizeof(heap_block_t) + current->next->size;
-            current->next = current->next->next;
-        } else {
-            current = current->next;
-        }
-    }
 }
