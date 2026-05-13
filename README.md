@@ -89,7 +89,7 @@ flowchart TB
     PROC --> MEM
     DRV --> HW
     MAIN -. FFI .-> RUST
-    RUST -. extern "C" .-> MEM
+    RUST -. extern C .-> MEM
 
     classDef rust fill:#dea584,stroke:#7d3c98,color:#000
     class RUST rust

@@ -38,7 +38,7 @@ flowchart LR
     end
 
     subgraph RUST["Rust Static Library (libmunux_rs.a)"]
-        SHIM["munux-rs-ffi<br/>extern \"C\" exports<br/>#[panic_handler]"]
+        SHIM["munux-rs-ffi<br/>extern C exports<br/>panic_handler"]
         SAFE["munux-rs<br/>Safe Rust modules<br/>(forbid unsafe outside ffi)"]
     end
 
@@ -47,7 +47,7 @@ flowchart LR
     VFS -.->|future| HDR
     HDR --> SHIM
     SHIM --> SAFE
-    SAFE -. "GlobalAlloc shim" .-> HEAP_C
+    SAFE -.->|GlobalAlloc shim| HEAP_C
 
     classDef rust fill:#dea584,stroke:#7d3c98,color:#000
     class SHIM,SAFE rust
