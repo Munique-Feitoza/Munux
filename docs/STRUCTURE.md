@@ -12,48 +12,68 @@ Munux/
 ├── docs/                      # Comprehensive documentation
 │   ├── INDEX.md              # Documentation navigation guide
 │   ├── ARCHITECTURE.md       # System architecture overview
-│   ├── MEMORY.md            # Memory management details
-│   ├── PROCESSES.md         # Process management and scheduling
-│   ├── INTERRUPTS.md        # Interrupt handling system
-│   ├── DRIVERS.md           # Device driver architecture
-│   ├── BUILD.md             # Build and testing guide
-│   ├── API.md               # Complete API reference
-│   └── ROADMAP.md           # Development roadmap
+│   ├── RUST.md               # Rust integration strategy and FFI boundary
+│   ├── MEMORY.md             # Memory management details
+│   ├── PROCESSES.md          # Process management and scheduling
+│   ├── INTERRUPTS.md         # Interrupt handling system
+│   ├── DRIVERS.md            # Device driver architecture
+│   ├── BUILD.md              # Build and testing guide
+│   ├── API.md                # Complete API reference
+│   ├── STRUCTURE.md          # This file
+│   └── ROADMAP.md            # Development roadmap
 └── munux-core/               # Kernel implementation
     ├── README.md             # Core kernel documentation
-    ├── Makefile              # Build system
-    ├── boot/                 # Bootloader code
+    ├── Makefile              # Build system (GCC + NASM + Cargo + LD)
+    ├── boot/                 # Bootloader code (Assembly)
     │   ├── bootloader.asm   # Main bootloader
     │   └── pmode.asm        # Protected mode transition
     ├── kernel/               # Kernel source code
     │   ├── kernel.c         # Main kernel initialization
     │   ├── kernel.h         # Kernel header and types
     │   ├── kernel.ld        # Linker script
-    │   ├── interrupts/      # Interrupt handling subsystem
-    │   │   ├── idt.c       # IDT implementation
-    │   │   ├── idt.h       # IDT header
+    │   ├── interrupts/      # Interrupt handling subsystem (C + Assembly)
+    │   │   ├── idt.c        # IDT implementation
+    │   │   ├── idt.h        # IDT header
     │   │   ├── interrupt.asm  # Assembly interrupt stubs
-    │   │   └── io.h        # Port I/O operations
-    │   ├── memory/          # Memory management subsystem
-    │   │   ├── memory.h    # Memory subsystem header
-    │   │   ├── pmm.c       # Physical memory manager
-    │   │   ├── vmm.c       # Virtual memory manager
-    │   │   ├── heap.c      # Heap allocator
-    │   │   └── utils.c     # Memory utilities
-    │   ├── process/         # Process management subsystem
-    │   │   ├── process.h   # Process subsystem header
-    │   │   ├── process.c   # Process management
-    │   │   ├── scheduler.c # Scheduler implementation
-    │   │   └── switch.asm  # Context switching
-    │   └── drivers/         # Device drivers
-    │       ├── timer.c/.h  # Timer driver
-    │       ├── keyboard.c/.h # Keyboard driver
-    │       ├── mouse.c/.h   # Mouse driver
-    │       ├── serial.c/.h  # Serial port driver
-    │       └── disk.c/.h    # Disk driver
-    └── build/               # Build outputs (generated)
-        ├── *.o              # Object files
-        ├── kernel.elf       # Kernel ELF executable
+    │   │   └── io.h         # Port I/O operations
+    │   ├── memory/          # Memory management subsystem (C)
+    │   │   ├── memory.h     # Memory subsystem header
+    │   │   ├── pmm.c        # Physical memory manager
+    │   │   ├── vmm.c        # Virtual memory manager
+    │   │   ├── heap.c       # Heap allocator (porting to Rust in v0.3)
+    │   │   └── utils.c      # Memory utilities
+    │   ├── process/         # Process management subsystem (C + Assembly)
+    │   │   ├── process.h    # Process subsystem header
+    │   │   ├── process.c    # Process management
+    │   │   ├── scheduler.c  # Scheduler implementation
+    │   │   └── switch.asm   # Context switching
+    │   ├── drivers/         # Device drivers (C)
+    │   │   ├── timer.c/.h   # Timer driver
+    │   │   ├── keyboard.c/.h  # Keyboard driver
+    │   │   ├── mouse.c/.h   # Mouse driver
+    │   │   ├── serial.c/.h  # Serial port driver
+    │   │   └── disk.c/.h    # Disk driver
+    │   └── rust/            # Rust no_std static library (v0.3+)
+    │       ├── Cargo.toml          # Workspace manifest
+    │       ├── rust-toolchain.toml # Pinned nightly version
+    │       ├── i686-unknown-none.json  # Custom target specification
+    │       ├── .cargo/config.toml  # Build profile and rustflags
+    │       ├── cbindgen.toml       # C header generation config
+    │       ├── munux-rs/           # Main crate (safe Rust)
+    │       │   └── src/
+    │       │       ├── lib.rs      # Crate root (no_std, panic handler)
+    │       │       ├── alloc.rs    # Heap allocator (replaces heap.c)
+    │       │       └── util/       # Shared safe utilities
+    │       ├── munux-rs-ffi/       # FFI shim crate (all unsafe lives here)
+    │       │   └── src/
+    │       │       ├── lib.rs      # extern "C" exports
+    │       │       └── panic.rs    # #[panic_handler] routed to kernel panic
+    │       └── include/            # Generated C headers (committed)
+    │           └── munux_rs.h
+    └── build/               # Build outputs (generated, gitignored)
+        ├── *.o              # Object files (C and Assembly)
+        ├── libmunux_rs.a    # Rust static library
+        ├── kernel.elf       # Kernel ELF executable (final link)
         ├── kernel.bin       # Kernel flat binary
         ├── bootloader.bin   # Bootloader binary
         └── munux.iso        # Bootable ISO image
@@ -158,6 +178,26 @@ Each driver consists of .c implementation and .h header:
 
 **disk**: ATA/IDE disk controller for mass storage access
 
+### munux-core/kernel/rust/
+
+The Rust subsystem, introduced in v0.3. Compiles to a `no_std` static library (`libmunux_rs.a`) that is linked into the kernel ELF alongside the C and Assembly objects.
+
+**Cargo.toml**: Workspace manifest declaring the `munux-rs` and `munux-rs-ffi` member crates, plus shared profile settings.
+
+**rust-toolchain.toml**: Pins the exact nightly Rust release so every contributor produces bit-identical artifacts.
+
+**i686-unknown-none.json**: Custom target specification — bare-metal 32-bit x86, System V ABI, no hardware float, `static` relocation model.
+
+**.cargo/config.toml**: Defines the default `--target` flag and `rustflags` so `cargo build` works without command-line arguments.
+
+**cbindgen.toml**: Configuration for the `cbindgen` header generator, which emits `include/munux_rs.h` from the Rust public API.
+
+**munux-rs/**: The main crate containing safe Rust code. Forbids unsafe blocks outside of well-justified, audited exceptions.
+
+**munux-rs-ffi/**: The FFI shim crate. All `extern "C"` exports and `#[panic_handler]` definitions live here. This crate is the only place where unsafe code is expected.
+
+**include/**: Generated C headers, committed to version control. The C kernel `#include`s these to call into Rust.
+
 ### munux-core/build/
 
 Generated during compilation. Contains intermediate and final build outputs.
@@ -176,17 +216,23 @@ Generated during compilation. Contains intermediate and final build outputs.
 
 ## File Naming Conventions
 
-**Assembly files**: .asm extension (NASM syntax)
+**Assembly files**: `.asm` extension (NASM syntax)
 
-**C source**: .c extension
+**C source**: `.c` extension
 
-**C headers**: .h extension
+**C headers**: `.h` extension (handwritten in `kernel/`; generated by `cbindgen` in `kernel/rust/include/`)
 
-**Markdown docs**: .md extension
+**Rust source**: `.rs` extension, organized into Cargo crates under `kernel/rust/`
 
-**Build scripts**: Makefile (no extension)
+**Cargo manifests**: `Cargo.toml`
 
-**Linker scripts**: .ld extension
+**Markdown docs**: `.md` extension
+
+**Build scripts**: `Makefile` (no extension)
+
+**Linker scripts**: `.ld` extension
+
+**Target specifications**: `.json` extension (Rust custom targets)
 
 ## Code Organization Principles
 
@@ -242,9 +288,12 @@ Phony targets provide user commands (all, clean, run)
 1. Assemble bootloader to flat binary
 2. Compile C sources to ELF objects
 3. Assemble ASM sources to ELF objects
-4. Link all objects into kernel ELF
-5. Extract flat binary from ELF
-6. Combine into bootable ISO
+4. Build the Rust workspace (`cargo build --release`) producing `libmunux_rs.a`
+5. Link all C/ASM objects together with the Rust static library into the kernel ELF
+6. Extract flat binary from ELF
+7. Combine into bootable ISO
+
+Phases 2, 3 and 4 are independent and parallelize cleanly under `make -j`.
 
 ### Dependency Tracking
 

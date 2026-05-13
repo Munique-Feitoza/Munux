@@ -1,10 +1,22 @@
-# Munux Operating System - Technical Documentation
+# Munux Operating System — Technical Documentation
 
 ## Overview
 
 Munux is a modern, educational operating system designed from the ground up to provide both powerful functionality and deep learning opportunities. Built on the x86 architecture, Munux implements fundamental OS concepts including memory management, process scheduling, interrupt handling, and device drivers.
 
-The project philosophy centers on transparency and comprehension - every component is designed to be understandable while maintaining production-quality code standards.
+The project philosophy centers on transparency and comprehension — every component is designed to be understandable while maintaining production-quality code standards.
+
+## Implementation Languages
+
+Munux is a polyglot kernel with each language assigned to the layer where it provides the most value:
+
+| Language | Role | Rationale |
+|---|---|---|
+| **x86 Assembly (NASM)** | Bootloader, multiboot header, interrupt stubs, context switch | Direct hardware control and instruction-level precision where no abstraction is acceptable |
+| **C (C99, freestanding)** | Core subsystems — IDT, PMM, VMM, heap, scheduler, drivers | Predictable ABI, mature freestanding toolchain, decades of OS literature to draw from |
+| **Rust (no_std, edition 2021)** | New and memory-sensitive components linked as a static library | Compile-time memory safety, strong type system, fearless concurrency primitives — without a runtime |
+
+The Rust layer is **additive**: it is compiled as a `no_std` static library and linked into the kernel ELF alongside the C and Assembly objects. There is no Rust runtime, no `std`, no allocator beyond what the kernel itself provides. See [RUST.md](RUST.md) for the full integration model.
 
 ## System Overview (UML Component Diagram)
 
@@ -24,14 +36,19 @@ flowchart TB
     end
 
     subgraph KERNEL["Munux Kernel (Ring 0)"]
-        BOOT["Bootloader + Multiboot"]
-        IDT["Interrupt Subsystem<br/>(IDT + ISR + IRQ)"]
-        PMM["PMM<br/>(Bitmap Frame Allocator)"]
-        VMM["VMM<br/>(Paging / Page Directory)"]
-        HEAP["Heap<br/>(First-fit + Coalescing)"]
-        PROC["Process Subsystem<br/>(PCB + Scheduler)"]
-        DRV["Device Drivers<br/>(timer / kbd / mouse / disk / serial)"]
-        MAIN["kernel_main"]
+        BOOT["Bootloader + Multiboot<br/><i>Assembly</i>"]
+        IDT["Interrupt Subsystem<br/>(IDT + ISR + IRQ)<br/><i>C + Assembly</i>"]
+        PMM["PMM<br/>(Bitmap Frame Allocator)<br/><i>C</i>"]
+        VMM["VMM<br/>(Paging / Page Directory)<br/><i>C</i>"]
+        HEAP["Heap<br/>(First-fit + Coalescing)<br/><i>C → Rust (v0.3)</i>"]
+        PROC["Process Subsystem<br/>(PCB + Scheduler)<br/><i>C + Assembly</i>"]
+        DRV["Device Drivers<br/>(timer / kbd / mouse / disk / serial)<br/><i>C</i>"]
+        MAIN["kernel_main<br/><i>C</i>"]
+    end
+
+    subgraph RUST["Rust Static Library<br/>(libmunux_rs.a · no_std)"]
+        RS_ALLOC["alloc<br/>(GlobalAlloc shim)"]
+        RS_UTIL["util<br/>(safe wrappers, types)"]
     end
 
     BOOT --> MAIN
@@ -51,7 +68,15 @@ flowchart TB
     DRV --> COM
     VMM --> CPU
     PMM --> RAM
+
+    HEAP -. FFI .-> RS_ALLOC
+    MAIN -. FFI .-> RS_UTIL
+
+    classDef rust fill:#dea584,stroke:#7d3c98,color:#000
+    class RS_ALLOC,RS_UTIL rust
 ```
+
+The dashed edges denote the FFI boundary between C and Rust. The Rust crate is statically linked into `kernel.elf`; from the C side it is indistinguishable from any other object file in the link.
 
 ## Architecture
 
@@ -68,6 +93,8 @@ The kernel is organized into several subsystems:
 **Process Management**: Full multitasking support through a Process Control Block structure that maintains process state, context, priority, and memory information. The round-robin scheduler with priority levels ensures fair CPU distribution while allowing important tasks to execute preferentially.
 
 **Device Drivers**: Low-level hardware abstraction for essential peripherals including the Programmable Interval Timer for time-based scheduling, a complete PS/2 keyboard driver with scancode translation and modifier key support, PS/2 mouse driver with three-button support, ATA/IDE disk controller for mass storage access, and serial port driver for debugging and external communication.
+
+**Rust Static Library**: A `no_std` Rust crate compiled to `libmunux_rs.a` and linked into the kernel ELF. It exposes an `extern "C"` API consumed by the C core. Initial scope (v0.3) covers a safe heap allocator and shared utility types; later phases will incrementally port additional subsystems where memory safety provides the highest leverage.
 
 ## Memory Layout
 
@@ -182,9 +209,25 @@ The round-robin scheduler provides fair CPU distribution with low overhead. Cont
 
 Interrupt handlers are kept short, performing only essential work before returning. Longer operations are deferred to process context when possible.
 
+## Rust Integration Architecture
+
+The Rust layer follows a strict set of architectural rules that preserve the existing C ABI and keep the kernel buildable even if the Rust toolchain is unavailable for incidental tasks (the production build, however, requires it).
+
+**Compilation unit**: A single Cargo workspace under `munux-core/kernel/rust/` produces one static library (`libmunux_rs.a`). The library is built with `--target i686-unknown-none` using a custom target specification that disables hardware floating-point, sets the data model to `ilp32`, and matches the C ABI used by the rest of the kernel.
+
+**Linkage model**: The Rust static library is treated as a peer of the C object files during the final `ld` invocation. Symbols crossing the boundary are declared `#[no_mangle] pub extern "C" fn …` on the Rust side and `extern …` on the C side, with header generation automated via `cbindgen`.
+
+**Allocator contract**: Rust's `core::alloc::GlobalAlloc` is implemented by a thin shim that forwards to the kernel's existing `kmalloc` / `kfree`. This allows Rust modules to use `alloc::boxed::Box`, `alloc::vec::Vec`, and similar types without introducing a second heap.
+
+**Panic policy**: A `#[panic_handler]` is provided that routes through `serial_writestring` and then halts the CPU via the existing kernel panic path, so a Rust panic surfaces identically to a C `panic()` call.
+
+**Safety policy**: The crate root sets `#![forbid(unsafe_op_in_unsafe_fn)]` and `#![deny(clippy::undocumented_unsafe_blocks)]`. All `unsafe` blocks are confined to the FFI shim layer (`ffi/`) and must carry a `// SAFETY:` comment documenting the invariant relied upon.
+
+For the full strategy, porting order, and FFI conventions, see [RUST.md](RUST.md).
+
 ## Future Development
 
-The current implementation provides a solid foundation for advanced features. Planned enhancements include a virtual file system abstraction layer, ext2 file system support, user mode with ring separation, system call interface, ELF executable loading, standard C library, networking stack, and graphical user interface.
+The current implementation provides a solid foundation for advanced features. Planned enhancements include a virtual file system abstraction layer, ext2 file system support, user mode with ring separation, system call interface, ELF executable loading, freestanding C library, networking stack, and graphical user interface. The Rust adoption (v0.3) is the immediate predecessor to these system-services features and will inform which future subsystems are written in Rust from the start versus ported from C.
 
 ---
 

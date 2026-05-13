@@ -1,8 +1,17 @@
 # Munux Development Roadmap
 
-## Current Status: v0.2 - Kernel Fundamentals Complete
+## Current Status: v0.3 — Rust Adoption Complete
 
-The Munux kernel has reached a significant milestone with all fundamental subsystems operational. The system now includes complete interrupt handling, memory management, process scheduling, and essential device drivers.
+| Version | Codename | State |
+|:---:|---|---|
+| **0.2** | *Kernel Fundamentals* | ✅ Released |
+| **0.3** | *Rust Adoption* | ✅ Released |
+| **0.4** | *System Services* | 🎯 Active development |
+| **0.5+** | *User Mode and beyond* | 📋 Long-term |
+
+The v0.3 milestone closes a multi-cycle effort to bring Rust into the Munux source tree without disturbing the existing C ABI. The polyglot build pipeline now produces a single kernel ELF combining objects from three toolchains — NASM, GCC and `rustc` — and the first subsystem (the kernel heap) has been ported to safe Rust under the existing entry points.
+
+The codebase remains predominantly C and Assembly. Rust is **additive**: it joins the toolchain wherever memory safety provides the highest leverage, and old code is left alone until there is a concrete reason to rework it.
 
 ## Phase 1: Foundation (COMPLETED)
 
@@ -43,7 +52,39 @@ The Munux kernel has reached a significant milestone with all fundamental subsys
 - Serial port for debugging
 - ATA/IDE disk controller
 
-## Phase 2: System Services (IN PLANNING)
+## Phase 1.5 — v0.3 Rust Adoption (COMPLETED)
+
+This phase introduced Rust to the kernel as a `no_std` static library linked into the existing ELF. The user-visible footprint is intentionally small; the foundational impact is significant — every future subsystem now has the option of being written in Rust without further toolchain work. See [RUST.md](RUST.md) for the full strategy.
+
+### Toolchain and Build
+- Custom target specification `i686-unknown-none.json` matching the C ABI (no FPU, static relocation, kernel code model)
+- `rust-toolchain.toml` pinning a specific nightly channel for reproducible builds
+- `Makefile` integration: `make rust`, `make rust-check`, `make rust-fmt`, `make rust-headers`, `make rust-clean`, with the Rust artifact participating in the final link
+- `cbindgen` configured to emit C headers consumed by the existing kernel sources; the header is committed to the repository for auditability
+- `clippy -D warnings` and `rustfmt --check` enforced as build gates
+
+### FFI Boundary
+- `extern "C"` declarations on every exported Rust function, prefixed `munux_rs_`
+- A shim crate (`munux-rs-ffi`) hosts all `unsafe` code at the boundary; the rest of the Rust tree compiles under `#![forbid(unsafe_op_in_unsafe_fn)]`
+- Panic handler routes through the existing `kernel_panic` path, so a Rust panic surfaces identically to a C panic
+- IRQ-safe locking via a handrolled `IrqMutex<T>` that pairs a spin-lock with `cli` / `sti`, reusable by any future Rust subsystem
+
+### First Ported Subsystem — Heap Allocator
+- The first-fit free-list allocator from the legacy [`heap.c`](../munux-core/kernel/memory/heap.c) was reimplemented in Rust ([`heap.rs`](../munux-core/kernel/rust/munux-rs/src/heap.rs))
+- The C entry points `kmalloc` / `kmalloc_aligned` / `kmalloc_physical` / `kfree` are preserved byte-for-byte and now forward to the Rust implementation
+- Block header layout (`#[repr(C)]`) matches the legacy `heap_block_t` for debugger continuity
+- Heap growth still happens on the C side (it requires PMM / VMM) and is exposed to Rust via a small `munux_c_heap_grow` callback
+
+### Closed With
+- The kernel boots in QEMU with the Rust-backed heap as the sole allocator
+- `kernel_main` now runs the full init chain `idt_init → pmm_init → vmm_init → heap_init`, followed by a heap smoke test (`kmalloc(128)`, `kmalloc(256)`, write/read-back, `kfree`, `kmalloc(384)` to exercise coalescing) that completes in green
+- All existing C subsystems link and operate unchanged
+- The Rust workspace compiles with zero warnings under `-D warnings` and passes `clippy --lib` with documented `#[allow]` exceptions
+- Two latent issues uncovered and fixed during wiring:
+  1. **`vmm_init` bootstrap**: previously allocated the page directory through the (uninitialized) heap; now takes a physical frame directly from PMM
+  2. **C compilation flags**: added `-mno-sse -mno-sse2 -mno-mmx -mgeneral-regs-only` to keep GCC from auto-vectorizing `memset`/`memcpy` into SSE2 instructions the kernel cannot execute
+
+## Phase 2 — v0.4 System Services (ACTIVE)
 
 ### File System Layer
 - Virtual File System abstraction
@@ -273,6 +314,16 @@ The Munux kernel has reached a significant milestone with all fundamental subsys
 
 This roadmap represents the long-term vision for Munux. Implementation priorities may shift based on learning objectives, technical challenges, and community input. The focus remains on creating an educational yet fully functional operating system that demystifies how computers work at the lowest levels.
 
-**Current Focus**: Completing Phase 2 (System Services) to enable file-based applications and a functional shell.
+**Current Focus**: **Phase 2 — System Services (v0.4)**, starting with the VFS abstraction and the ext2 file system. With the polyglot build pipeline established and the FFI contract validated by the heap port, new subsystems default to Rust where the boundary cost is acceptable.
 
-**Next Milestone**: VFS and ext2 file system implementation.
+**Starting Points for v0.4**
+
+These are concrete pieces of work that are ready to be picked up immediately. The v0.3 wrap-up surfaced each of them; none are blockers for opening v0.4 but tackling them early avoids them coming back as surprises:
+
+1. **Multiboot memory discovery** — `pmm_init(0x02000000)` currently hard-codes 32 MiB. Parse the multiboot info structure (pointer in `EBX` at entry) to read `mem_upper` and pass the real value.
+2. **Aligned-alloc API** — `kmalloc_aligned` currently over-allocates by a page and rounds up, leaking the slack. A first-class aligned-alloc on the Rust side (`munux_rs_alloc_aligned(size, align)`) would clean this up before the VFS / disk-cache starts using it heavily.
+3. **VFS skeleton (Rust)** — Single trait for `Filesystem` and `Inode`, plus an in-memory `tmpfs` as the first registration, mountable at `/` for early boot tests.
+4. **ext2 superblock and inode parsing (Rust)** — Pure parsing of on-disk metadata, no kernel side effects; perfect for property-based tests on the host.
+5. **Buffer cache** — Owned by Rust, fed by the existing C ATA driver via an `extern "C"` `disk_read_sector` / `disk_write_sector` shim.
+
+**Next Milestone**: items 1 and 2 closed; items 3 and 4 producing a `tmpfs` and a read-only ext2 mount visible from `kernel_main`.

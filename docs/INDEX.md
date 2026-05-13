@@ -8,9 +8,10 @@ Welcome to the Munux operating system documentation. This comprehensive guide co
 
 New to Munux? Start here:
 
-1. **[README.md](../README.md)** - Project overview and vision
-2. **[BUILD.md](BUILD.md)** - How to build and run Munux
-3. **[ARCHITECTURE.md](ARCHITECTURE.md)** - High-level system design
+1. **[README.md](../README.md)** — Project overview and vision
+2. **[BUILD.md](BUILD.md)** — How to build and run Munux (C, Assembly and Rust)
+3. **[ARCHITECTURE.md](ARCHITECTURE.md)** — High-level system design
+4. **[RUST.md](RUST.md)** — Rust integration strategy and FFI boundary
 
 ## Core Documentation
 
@@ -21,6 +22,9 @@ Comprehensive overview of Munux's design philosophy, component organization, and
 
 **[ROADMAP.md](ROADMAP.md)**  
 Development timeline showing completed features, current work, and future plans. See where Munux is heading.
+
+**[RUST.md](RUST.md)**  
+Strategy for the Rust adoption (v0.3): toolchain, custom target specification, FFI boundary, panic handling, allocator contract, and the order in which subsystems will be ported from C to Rust.
 
 ### Subsystems
 
@@ -50,12 +54,13 @@ Quick jump-list of the diagrams added across the documentation:
 
 | Document | Diagrams |
 |---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Component diagram (kernel ↔ hardware) · Boot sequence |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Component diagram (kernel ↔ hardware, with Rust layer) · Boot sequence |
 | [MEMORY.md](MEMORY.md) | Class diagram (PMM/VMM/Heap) · Heap-expansion sequence · Address-translation activity |
 | [PROCESSES.md](PROCESSES.md) | Class diagram (PCB/Scheduler) · Process state machine · Context-switch sequence |
 | [INTERRUPTS.md](INTERRUPTS.md) | IDT vector layout · Interrupt lifecycle sequence · Exception/IRQ dispatch activity |
 | [DRIVERS.md](DRIVERS.md) | Driver component diagram · Keyboard IRQ sequence |
-| [README.md](../README.md) | Kernel-at-a-glance overview diagram |
+| [RUST.md](RUST.md) | FFI boundary diagram · Build pipeline sequence · Subsystem port progression |
+| [README.md](../README.md) | Kernel-at-a-glance overview diagram (with FFI edges) |
 
 ## Documentation by Topic
 
@@ -163,15 +168,17 @@ Documentation improvements are always welcome:
 
 ```
 docs/
-├── INDEX.md           # This file - documentation guide
+├── INDEX.md           # This file — documentation guide
 ├── ARCHITECTURE.md    # System architecture overview
-├── MEMORY.md         # Memory management subsystem
-├── PROCESSES.md      # Process management and scheduling
-├── INTERRUPTS.md     # Interrupt handling system
-├── DRIVERS.md        # Device drivers
-├── BUILD.md          # Building and running Munux
-├── API.md            # Complete API reference
-└── ROADMAP.md        # Development roadmap
+├── RUST.md            # Rust integration strategy and FFI boundary
+├── MEMORY.md          # Memory management subsystem
+├── PROCESSES.md       # Process management and scheduling
+├── INTERRUPTS.md      # Interrupt handling system
+├── DRIVERS.md         # Device drivers
+├── BUILD.md           # Building and running Munux
+├── API.md             # Complete API reference
+├── STRUCTURE.md       # Repository layout reference
+└── ROADMAP.md         # Development roadmap
 ```
 
 ## Additional Resources
@@ -183,12 +190,13 @@ The most accurate documentation is the code itself:
 ```
 munux-core/
 ├── kernel/           # Main kernel code
-│   ├── interrupts/  # Interrupt handling
-│   ├── memory/      # Memory management
-│   ├── process/     # Process management
-│   └── drivers/     # Device drivers
-├── boot/            # Bootloader
-└── Makefile         # Build system
+│   ├── interrupts/  # Interrupt handling (C + Assembly)
+│   ├── memory/      # Memory management (C; heap migrating to Rust)
+│   ├── process/     # Process management (C + Assembly)
+│   ├── drivers/     # Device drivers (C)
+│   └── rust/        # Rust no_std static library (v0.3+)
+├── boot/            # Bootloader (Assembly)
+└── Makefile         # Build system (orchestrates GCC, NASM, Cargo, LD)
 ```
 
 ### External Resources
@@ -224,7 +232,7 @@ Your input helps make Munux documentation better for everyone.
 
 ---
 
-**Documentation Version**: 0.2  
-**Last Updated**: Corresponds to kernel version 0.2  
+**Documentation Version**: 0.3  
+**Last Updated**: Corresponds to kernel version 0.3 (Rust Adoption)  
 **Maintained by**: Munique Feitoza  
 **License**: GPLv3
