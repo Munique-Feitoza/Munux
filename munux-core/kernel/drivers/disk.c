@@ -102,25 +102,23 @@ int disk_write_sector(uint32_t lba, const uint8_t* buffer) {
     return 0;
 }
 
-// Identifica disco
+// Identifica disco. Os 256 words retornados pelo IDENTIFY são lidos e
+// descartados — a leitura é necessária para esvaziar o buffer do
+// controlador, mas o kernel ainda não consome esses metadados.
 void disk_identify(void) {
-    uint16_t buffer[256];
-    
     outb(ATA_PRIMARY_DRIVE, 0xA0);
     outb(ATA_PRIMARY_SECCOUNT, 0);
     outb(ATA_PRIMARY_LBA_LOW, 0);
     outb(ATA_PRIMARY_LBA_MID, 0);
     outb(ATA_PRIMARY_LBA_HIGH, 0);
     outb(ATA_PRIMARY_COMMAND, ATA_CMD_IDENTIFY);
-    
+
     if (inb(ATA_PRIMARY_STATUS) == 0) {
         return; // Nenhum drive
     }
-    
+
     ata_wait_bsy();
-    
-    // Lê identificação
     for (int i = 0; i < 256; i++) {
-        buffer[i] = inw(ATA_PRIMARY_DATA);
+        (void)inw(ATA_PRIMARY_DATA);
     }
 }

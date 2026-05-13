@@ -132,11 +132,17 @@ static const char* exception_messages[] = {
     "Reserved"
 };
 
-// Handler comum para ISRs (exceções)
+#define EXCEPTION_COUNT (sizeof(exception_messages) / sizeof(exception_messages[0]))
+
+// Handler comum para ISRs (exceções).
+// Qualquer exceção CPU não tratada cai aqui e é elevada a panic com
+// o nome legível da exceção — silêncio numa exceção é o tipo de bug
+// que esconde corrupção por horas.
 void isr_handler(registers_t* regs) {
-    // Versão minimalista - apenas retorna sem fazer nada
-    // Evita chamar terminal_writestring que pode causar problemas
-    (void)regs; // Suprime warning de variável não usada
+    const char* name = regs->int_no < EXCEPTION_COUNT
+        ? exception_messages[regs->int_no]
+        : "Unknown Interrupt";
+    kernel_panic(name);
 }
 
 // Handler comum para IRQs (hardware)
