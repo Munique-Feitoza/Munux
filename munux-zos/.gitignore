@@ -1,0 +1,23 @@
+# Saídas de build (quando houver kernel — Fases 1+)
+build/
+*.o
+*.elf
+*.bin
+*.img
+*.iso
+
+# Rust build outputs (caso o flavor adote Rust, como o munux-os)
+kernel/rust/target/
+kernel/rust/**/*.rs.bk
+kernel/rust/Cargo.lock
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

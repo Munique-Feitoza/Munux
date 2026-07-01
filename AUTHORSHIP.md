@@ -1,7 +1,7 @@
 # Declaração de Autoria: Munux
 
 **Projeto:** Munux  
-**Criadora:** Munique Alves Pacheco Feitoza  
+**Criadora:** Munique Feitoza  
 **Data de criação:** 19 de julho de 2025  
 **Repositório original:** [https://github.com/Munique-Feitoza/Munux/](https://github.com/Munique-Feitoza/Munux/) 
 **Licença:** GPLv3
@@ -28,7 +28,7 @@ Este projeto é licenciado sob a **GNU General Public License v3.0**, o que gara
 
 ## Prova de autoria
 
-Esta declaração, somada ao histórico de commits no GitHub, contribuições públicas, e o post publicado no LinkedIn em 19 de julho de 2025, servem como **prova irrefutável** da autoria e iniciativa do projeto por Munique Alves Pacheco Feitoza.
+Esta declaração, somada ao histórico de commits no GitHub, contribuições públicas, e o post publicado no LinkedIn em 19 de julho de 2025, servem como **prova irrefutável** da autoria e iniciativa do projeto por Munique Feitoza.
 
 ---
 
@@ -39,6 +39,6 @@ Qualquer uso do nome **Munux**, sua identidade visual ou associação indevida q
 ---
 
 **Assinado digitalmente por:**  
-Munique Alves Pacheco Feitoza  
+Munique Feitoza  
 Rio das Flores (RJ), Brasil  
 22 de novembro de 1999  

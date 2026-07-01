@@ -1,389 +1,400 @@
-# Munux Project Structure
+# Estrutura do Projeto Munux
 
-## Repository Organization
+## Organização do Repositório
 
-The Munux repository is organized to separate concerns and maintain clarity:
+O repositório do Munux é organizado para separar responsabilidades e manter a clareza:
 
 ```
 Munux/
-├── AUTHORSHIP.md              # Author declaration and credits
-├── LICENSE                    # GPLv3 license text
-├── README.md                  # Project overview and vision
-├── docs/                      # Comprehensive documentation
-│   ├── INDEX.md              # Documentation navigation guide
-│   ├── ARCHITECTURE.md       # System architecture overview
-│   ├── RUST.md               # Rust integration strategy and FFI boundary
-│   ├── MEMORY.md             # Memory management details
-│   ├── PROCESSES.md          # Process management and scheduling
-│   ├── INTERRUPTS.md         # Interrupt handling system
-│   ├── DRIVERS.md            # Device driver architecture
-│   ├── BUILD.md              # Build and testing guide
-│   ├── API.md                # Complete API reference
-│   ├── STRUCTURE.md          # This file
-│   └── ROADMAP.md            # Development roadmap
-└── munux-core/               # Kernel implementation
-    ├── README.md             # Core kernel documentation
-    ├── Makefile              # Build system (GCC + NASM + Cargo + LD)
-    ├── boot/                 # Bootloader code (Assembly)
-    │   ├── bootloader.asm   # Main bootloader
-    │   └── pmode.asm        # Protected mode transition
-    ├── kernel/               # Kernel source code
-    │   ├── kernel.c         # Main kernel initialization
-    │   ├── kernel.h         # Kernel header and types
+├── AUTHORSHIP.md              # Declaração de autoria e créditos
+├── LICENSE                    # Texto da licença GPLv3
+├── README.md                  # Visão geral e visão do projeto
+├── docs/                      # Documentação do ECOSSISTEMA (projeto inteiro)
+│   ├── ECOSYSTEM.md          # Visão geral, flavors e a ponte MJP
+│   └── STRUCTURE.md          # Este arquivo
+├── munux-os/               # Flavor 1: workspace reativo (kernel x86 — C/ASM/Rust)
+    ├── README.md             # Documentação do kernel comum
+    ├── Makefile              # Sistema de build (GCC + NASM + Cargo + LD)
+    ├── docs/                 # Documentação SÓ do munux-os
+    │   ├── INDEX.md          # Guia de navegação da doc do OS
+    │   ├── ARCHITECTURE.md   # Visão de arquitetura do kernel
+    │   ├── RUST.md           # Integração Rust e fronteira FFI
+    │   ├── MEMORY.md         # PMM / VMM / Heap
+    │   ├── PROCESSES.md      # Processos e scheduler
+    │   ├── INTERRUPTS.md     # IDT e exceções
+    │   ├── DRIVERS.md        # Drivers de dispositivo
+    │   ├── BUILD.md          # Build e testes
+    │   ├── API.md            # Referência de API do kernel
+    │   └── ROADMAP.md        # Roadmap do munux-os
+    ├── boot/                 # Código do bootloader (Assembly)
+    │   ├── bootloader.asm   # Bootloader principal
+    │   └── pmode.asm        # Transição para o modo protegido
+    ├── kernel/               # Código-fonte do kernel
+    │   ├── kernel.c         # Inicialização principal do kernel
+    │   ├── kernel.h         # Header e tipos do kernel
     │   ├── kernel.ld        # Linker script
-    │   ├── interrupts/      # Interrupt handling subsystem (C + Assembly)
-    │   │   ├── idt.c        # IDT implementation
-    │   │   ├── idt.h        # IDT header
-    │   │   ├── interrupt.asm  # Assembly interrupt stubs
-    │   │   └── io.h         # Port I/O operations
-    │   ├── memory/          # Memory management subsystem (C)
-    │   │   ├── memory.h     # Memory subsystem header
-    │   │   ├── pmm.c        # Physical memory manager
-    │   │   ├── vmm.c        # Virtual memory manager
-    │   │   ├── heap.c       # Heap allocator (porting to Rust in v0.3)
-    │   │   └── utils.c      # Memory utilities
-    │   ├── process/         # Process management subsystem (C + Assembly)
-    │   │   ├── process.h    # Process subsystem header
-    │   │   ├── process.c    # Process management
-    │   │   ├── scheduler.c  # Scheduler implementation
-    │   │   └── switch.asm   # Context switching
-    │   ├── drivers/         # Device drivers (C)
-    │   │   ├── timer.c/.h   # Timer driver
-    │   │   ├── keyboard.c/.h  # Keyboard driver
-    │   │   ├── mouse.c/.h   # Mouse driver
-    │   │   ├── serial.c/.h  # Serial port driver
-    │   │   └── disk.c/.h    # Disk driver
-    │   └── rust/            # Rust no_std static library (v0.3+)
-    │       ├── Cargo.toml          # Workspace manifest
-    │       ├── rust-toolchain.toml # Pinned nightly version
-    │       ├── i686-unknown-none.json  # Custom target specification
-    │       ├── .cargo/config.toml  # Build profile and rustflags
-    │       ├── cbindgen.toml       # C header generation config
-    │       ├── munux-rs/           # Main crate (safe Rust)
+    │   ├── interrupts/      # Subsistema de tratamento de interrupções (C + Assembly)
+    │   │   ├── idt.c        # Implementação da IDT
+    │   │   ├── idt.h        # Header da IDT
+    │   │   ├── interrupt.asm  # Stubs de interrupção em Assembly
+    │   │   └── io.h         # Operações de I/O de porta
+    │   ├── memory/          # Subsistema de gerenciamento de memória (C)
+    │   │   ├── memory.h     # Header do subsistema de memória
+    │   │   ├── pmm.c        # Gerenciador de memória física
+    │   │   ├── vmm.c        # Gerenciador de memória virtual
+    │   │   ├── heap.c       # Bootstrap C: mapeia páginas + grow, encaminha ao Rust
+    │   │   └── utils.c      # Utilitários de memória
+    │   ├── process/         # Subsistema de gerenciamento de processos (C + Assembly)
+    │   │   ├── process.h    # Header do subsistema de processos
+    │   │   ├── process.c    # Gerenciamento de processos
+    │   │   ├── scheduler.c  # Implementação do scheduler
+    │   │   └── switch.asm   # Troca de contexto
+    │   ├── drivers/         # Drivers de dispositivo (C)
+    │   │   ├── timer.c/.h   # Driver de timer
+    │   │   ├── keyboard.c/.h  # Driver de teclado
+    │   │   ├── mouse.c/.h   # Driver de mouse
+    │   │   ├── serial.c/.h  # Driver de porta serial
+    │   │   └── disk.c/.h    # Driver de disco
+    │   └── rust/            # Biblioteca estática Rust no_std (v0.3+)
+    │       ├── Cargo.toml          # Manifesto do workspace
+    │       ├── rust-toolchain.toml # Versão nightly fixada
+    │       ├── i686-unknown-none.json  # Especificação de target customizada
+    │       ├── .cargo/config.toml  # Profile de build e rustflags
+    │       ├── cbindgen.toml       # Config de geração de headers C
+    │       ├── munux-rs/           # Crate principal (Rust seguro)
     │       │   └── src/
-    │       │       ├── lib.rs      # Crate root (no_std, panic handler)
-    │       │       ├── alloc.rs    # Heap allocator (replaces heap.c)
-    │       │       └── util/       # Shared safe utilities
-    │       ├── munux-rs-ffi/       # FFI shim crate (all unsafe lives here)
+    │       │       ├── lib.rs      # Raiz da crate (no_std)
+    │       │       ├── heap.rs     # Alocador de heap (first-fit + coalesce)
+    │       │       └── sync.rs     # IrqMutex<T> (spin-lock + cli/sti)
+    │       ├── munux-rs-ffi/       # Crate de shim FFI (todo o unsafe vive aqui)
     │       │   └── src/
-    │       │       ├── lib.rs      # extern "C" exports
-    │       │       └── panic.rs    # #[panic_handler] routed to kernel panic
-    │       └── include/            # Generated C headers (committed)
+    │       │       ├── lib.rs      # Exportações extern "C"
+    │       │       └── panic.rs    # #[panic_handler] roteado ao panic do kernel
+    │       └── include/            # Headers C gerados (versionados)
     │           └── munux_rs.h
-    └── build/               # Build outputs (generated, gitignored)
-        ├── *.o              # Object files (C and Assembly)
-        ├── libmunux_rs.a    # Rust static library
-        ├── kernel.elf       # Kernel ELF executable (final link)
-        ├── kernel.bin       # Kernel flat binary
-        ├── bootloader.bin   # Bootloader binary
-        └── munux.iso        # Bootable ISO image
+    └── build/               # Saídas de build (geradas, no gitignore)
+        ├── *.o              # Arquivos-objeto (C e Assembly)
+        ├── libmunux_rs.a    # Biblioteca estática Rust
+        ├── kernel.elf       # Executável ELF do kernel (link final)
+        ├── kernel.bin       # Binário flat do kernel
+        ├── bootloader.bin   # Binário do bootloader
+        └── munux.iso        # Imagem ISO inicializável
+│
+└── munux-zos/              # Flavor 2: back-end transacional inspirado em mainframe (ESQUELETO)
+    ├── README.md            # Visão e propósito do flavor z/OS
+    ├── docs/                # Documentação SÓ do munux-zos
+    │   ├── ROADMAP.md       # Roadmap do z/OS
+    │   ├── ARCHITECTURE.md  # Arquitetura interna (JES/JCL/Datasets)
+    │   └── PROTOCOL.md      # MJP — protocolo da ponte de integração
+    ├── boot/                # (esqueleto — .gitkeep)
+    └── kernel/              # (esqueleto — .gitkeep)
 ```
 
-## Directory Purposes
+## Propósito dos Diretórios
 
-### Root Directory
+### Diretório Raiz
 
-**AUTHORSHIP.md**: Declares project authorship by Munique Feitoza with timestamp and licensing information.
+**AUTHORSHIP.md**: Declara a autoria do projeto por Munique Feitoza, com timestamp e informações de licenciamento.
 
-**LICENSE**: Full text of the GNU General Public License v3.0 under which Munux is distributed.
+**LICENSE**: Texto completo da GNU General Public License v3.0, sob a qual o Munux é distribuído.
 
-**README.md**: High-level project overview covering vision, goals, philosophy, and planned features.
+**README.md**: Visão geral de alto nível do projeto, cobrindo visão, objetivos, filosofia e funcionalidades planejadas.
 
 ### docs/
 
-Contains all project documentation written in Markdown format. Each document covers a specific aspect of the system in depth.
+Contém toda a documentação do projeto escrita em formato Markdown. Cada documento cobre em profundidade um aspecto específico do sistema.
 
-Documentation is written for multiple audiences:
-- Learners seeking to understand OS concepts
-- Developers contributing to Munux
-- System architects studying design decisions
+A documentação é escrita para múltiplos públicos:
+- Estudantes que buscam entender conceitos de sistemas operacionais
+- Desenvolvedores que contribuem para o Munux
+- Arquitetos de sistemas que estudam decisões de projeto
 
-All documentation cross-references related documents and source code.
+Toda a documentação faz referências cruzadas a documentos relacionados e ao código-fonte.
 
-### munux-core/
+### munux-os/
 
-The kernel implementation itself. All source code for the bootloader and kernel resides here.
+A própria implementação do kernel. Todo o código-fonte do bootloader e do kernel reside aqui.
 
-Organized by subsystem to maintain clear separation of concerns and enable independent development of each component.
+Organizado por subsistema para manter uma separação clara de responsabilidades e permitir o desenvolvimento independente de cada componente.
 
-### munux-core/boot/
+### munux-os/boot/
 
-Bootloader code written in x86 assembly. Responsible for:
-- Loading kernel from disk into memory
-- Transitioning from 16-bit real mode to 32-bit protected mode
-- Setting up initial GDT
-- Transferring control to kernel
+Código do bootloader escrito em assembly x86. Responsável por:
+- Carregar o kernel do disco para a memória
+- Fazer a transição do modo real de 16 bits para o modo protegido de 32 bits
+- Configurar a GDT inicial
+- Transferir o controle para o kernel
 
-**bootloader.asm**: Main bootloader logic including disk I/O and kernel loading
+**bootloader.asm**: Lógica principal do bootloader, incluindo I/O de disco e carregamento do kernel
 
-**pmode.asm**: Protected mode initialization code (currently integrated into bootloader.asm)
+**pmode.asm**: Código de inicialização do modo protegido (atualmente integrado ao bootloader.asm)
 
-### munux-core/kernel/
+### munux-os/kernel/
 
-Main kernel source code in C and assembly. Contains:
+Código-fonte principal do kernel em C e assembly. Contém:
 
-**kernel.c/h**: Entry point and initialization sequence for all subsystems
+**kernel.c/h**: Ponto de entrada e sequência de inicialização de todos os subsistemas
 
-**kernel.ld**: Linker script controlling memory layout of the kernel binary
+**kernel.ld**: Linker script que controla o layout de memória do binário do kernel
 
-### munux-core/kernel/interrupts/
+### munux-os/kernel/interrupts/
 
-Interrupt handling subsystem. Manages all CPU exceptions and hardware interrupts.
+Subsistema de tratamento de interrupções. Gerencia todas as exceções de CPU e interrupções de hardware.
 
-**idt.c/h**: Interrupt Descriptor Table management and initialization
+**idt.c/h**: Gerenciamento e inicialização da Interrupt Descriptor Table
 
-**interrupt.asm**: Assembly stubs for each interrupt vector (macros generate ISR/IRQ handlers)
+**interrupt.asm**: Stubs em assembly para cada vetor de interrupção (macros geram os handlers ISR/IRQ)
 
-**io.h**: Inline functions for port I/O operations (inb, outb, inw, outw, etc.)
+**io.h**: Funções inline para operações de I/O de porta (inb, outb, inw, outw, etc.)
 
-### munux-core/kernel/memory/
+### munux-os/kernel/memory/
 
-Memory management subsystem implementing three-tier memory abstraction.
+Subsistema de gerenciamento de memória que implementa uma abstração de memória em três camadas.
 
-**memory.h**: Public API for all memory functions
+**memory.h**: API pública de todas as funções de memória
 
-**pmm.c**: Physical Memory Manager - frame allocation via bitmap
+**pmm.c**: Physical Memory Manager — alocação de frames via bitmap
 
-**vmm.c**: Virtual Memory Manager - paging with page directory and page tables
+**vmm.c**: Virtual Memory Manager — paginação com page directory e page tables
 
-**heap.c**: Heap allocator - malloc/free implementation using first-fit algorithm
+**heap.c**: Heap allocator — implementação de malloc/free usando o algoritmo first-fit
 
-**utils.c**: Memory manipulation utilities (memset, memcpy, memcmp)
+**utils.c**: Utilitários de manipulação de memória (memset, memcpy, memcmp)
 
-### munux-core/kernel/process/
+### munux-os/kernel/process/
 
-Process management and scheduling subsystem.
+Subsistema de gerenciamento de processos e escalonamento.
 
-**process.h**: Public API for process operations
+**process.h**: API pública para operações de processo
 
-**process.c**: Process creation, termination, and management
+**process.c**: Criação, término e gerenciamento de processos
 
-**scheduler.c**: Round-robin scheduler with priority queues
+**scheduler.c**: Scheduler round-robin com filas de prioridade
 
-**switch.asm**: Context switching in assembly to save/restore CPU state
+**switch.asm**: Troca de contexto em assembly para salvar/restaurar o estado da CPU
 
-### munux-core/kernel/drivers/
+### munux-os/kernel/drivers/
 
-Device drivers for essential hardware.
+Drivers de dispositivo para o hardware essencial.
 
-Each driver consists of .c implementation and .h header:
+Cada driver consiste em uma implementação .c e um header .h:
 
-**timer**: Programmable Interval Timer for timekeeping and scheduling
+**timer**: Programmable Interval Timer para marcação de tempo e escalonamento
 
-**keyboard**: PS/2 keyboard with scancode translation and input buffering
+**keyboard**: Teclado PS/2 com tradução de scancode e buffering de entrada
 
-**mouse**: PS/2 mouse with movement tracking and button states
+**mouse**: Mouse PS/2 com rastreamento de movimento e estados dos botões
 
-**serial**: RS-232 serial port for debugging and external communication
+**serial**: Porta serial RS-232 para depuração e comunicação externa
 
-**disk**: ATA/IDE disk controller for mass storage access
+**disk**: Controlador de disco ATA/IDE para acesso a armazenamento em massa
 
-### munux-core/kernel/rust/
+### munux-os/kernel/rust/
 
-The Rust subsystem, introduced in v0.3. Compiles to a `no_std` static library (`libmunux_rs.a`) that is linked into the kernel ELF alongside the C and Assembly objects.
+O subsistema Rust, introduzido na v0.3. Compila para uma biblioteca estática `no_std` (`libmunux_rs.a`), que é linkada ao ELF do kernel junto com os objetos de C e Assembly.
 
-**Cargo.toml**: Workspace manifest declaring the `munux-rs` and `munux-rs-ffi` member crates, plus shared profile settings.
+**Cargo.toml**: Manifesto do workspace que declara as crates membras `munux-rs` e `munux-rs-ffi`, além das configurações de profile compartilhadas.
 
-**rust-toolchain.toml**: Pins the exact nightly Rust release so every contributor produces bit-identical artifacts.
+**rust-toolchain.toml**: Fixa a versão exata do Rust nightly para que todo contribuidor produza artefatos bit-a-bit idênticos.
 
-**i686-unknown-none.json**: Custom target specification — bare-metal 32-bit x86, System V ABI, no hardware float, `static` relocation model.
+**i686-unknown-none.json**: Especificação de target customizada — x86 bare-metal de 32 bits, ABI System V, sem float por hardware, modelo de relocação `static`.
 
-**.cargo/config.toml**: Defines the default `--target` flag and `rustflags` so `cargo build` works without command-line arguments.
+**.cargo/config.toml**: Define a flag `--target` padrão e os `rustflags` para que o `cargo build` funcione sem argumentos de linha de comando.
 
-**cbindgen.toml**: Configuration for the `cbindgen` header generator, which emits `include/munux_rs.h` from the Rust public API.
+**cbindgen.toml**: Configuração do gerador de headers `cbindgen`, que emite `include/munux_rs.h` a partir da API pública do Rust.
 
-**munux-rs/**: The main crate containing safe Rust code. Forbids unsafe blocks outside of well-justified, audited exceptions.
+**munux-rs/**: A crate principal, contendo o código Rust seguro. Proíbe blocos unsafe, exceto exceções bem justificadas e auditadas.
 
-**munux-rs-ffi/**: The FFI shim crate. All `extern "C"` exports and `#[panic_handler]` definitions live here. This crate is the only place where unsafe code is expected.
+**munux-rs-ffi/**: A crate de shim FFI. Todas as exportações `extern "C"` e definições de `#[panic_handler]` residem aqui. Esta crate é o único lugar onde código unsafe é esperado.
 
-**include/**: Generated C headers, committed to version control. The C kernel `#include`s these to call into Rust.
+**include/**: Headers C gerados, versionados no controle de versão. O kernel em C faz `#include` desses arquivos para chamar o Rust.
 
-### munux-core/build/
+### munux-os/build/
 
-Generated during compilation. Contains intermediate and final build outputs.
+Gerado durante a compilação. Contém os artefatos de build intermediários e finais.
 
-**NOT** checked into version control - recreated on each build.
+**NÃO** é versionado no controle de versão — é recriado a cada build.
 
-**.o files**: Compiled object files for each .c and .asm source
+**arquivos .o**: Arquivos-objeto compilados para cada fonte .c e .asm
 
-**kernel.elf**: Linked kernel in ELF format with debug symbols
+**kernel.elf**: Kernel linkado em formato ELF com símbolos de depuração
 
-**kernel.bin**: Flat binary kernel extracted from ELF for loading
+**kernel.bin**: Binário flat do kernel extraído do ELF para carregamento
 
-**bootloader.bin**: Assembled bootloader (exactly 512 bytes with 0xAA55 signature)
+**bootloader.bin**: Bootloader montado (exatamente 512 bytes com a assinatura 0xAA55)
 
-**munux.iso**: Bootable ISO image combining bootloader and kernel
+**munux.iso**: Imagem ISO inicializável combinando bootloader e kernel
 
-## File Naming Conventions
+## Convenções de Nomenclatura de Arquivos
 
-**Assembly files**: `.asm` extension (NASM syntax)
+**Arquivos assembly**: extensão `.asm` (sintaxe NASM)
 
-**C source**: `.c` extension
+**Fonte C**: extensão `.c`
 
-**C headers**: `.h` extension (handwritten in `kernel/`; generated by `cbindgen` in `kernel/rust/include/`)
+**Headers C**: extensão `.h` (escritos à mão em `kernel/`; gerados pelo `cbindgen` em `kernel/rust/include/`)
 
-**Rust source**: `.rs` extension, organized into Cargo crates under `kernel/rust/`
+**Fonte Rust**: extensão `.rs`, organizada em crates Cargo sob `kernel/rust/`
 
-**Cargo manifests**: `Cargo.toml`
+**Manifestos Cargo**: `Cargo.toml`
 
-**Markdown docs**: `.md` extension
+**Docs Markdown**: extensão `.md`
 
-**Build scripts**: `Makefile` (no extension)
+**Scripts de build**: `Makefile` (sem extensão)
 
-**Linker scripts**: `.ld` extension
+**Linker scripts**: extensão `.ld`
 
-**Target specifications**: `.json` extension (Rust custom targets)
+**Especificações de target**: extensão `.json` (targets customizados do Rust)
 
-## Code Organization Principles
+## Princípios de Organização do Código
 
-### Separation of Concerns
+### Separação de Responsabilidades
 
-Each subsystem is independent with well-defined interfaces. Memory management doesn't need to know about process internals. Drivers don't depend on scheduling details.
+Cada subsistema é independente, com interfaces bem definidas. O gerenciamento de memória não precisa conhecer os detalhes internos de processos. Os drivers não dependem dos detalhes de escalonamento.
 
-### Layered Architecture
+### Arquitetura em Camadas
 
-Higher layers build on lower layers:
-- Layer 0: Hardware (CPU, devices)
-- Layer 1: Drivers and interrupt handlers
-- Layer 2: Memory and process management
-- Layer 3: System services (future: VFS, syscalls)
-- Layer 4: User space (future)
+Camadas superiores se apoiam nas camadas inferiores:
+- Camada 0: Hardware (CPU, dispositivos)
+- Camada 1: Drivers e handlers de interrupção
+- Camada 2: Gerenciamento de memória e de processos
+- Camada 3: Serviços de sistema (futuro: VFS, syscalls)
+- Camada 4: Espaço de usuário (futuro)
 
-### Header Files
+### Arquivos de Header
 
-Headers declare public APIs and data structures. Implementation details remain in .c files.
+Os headers declaram APIs públicas e estruturas de dados. Os detalhes de implementação permanecem nos arquivos .c.
 
-Headers use include guards to prevent multiple inclusion:
+Os headers usam include guards para evitar inclusão múltipla:
 ```c
 #ifndef SUBSYSTEM_H
 #define SUBSYSTEM_H
-// declarations
+// declarações
 #endif
 ```
 
-### Assembly Integration
+### Integração com Assembly
 
-Assembly code interfaces with C through declared prototypes:
+O código assembly faz interface com o C por meio de protótipos declarados:
 
-C declares: `extern void switch_to_process(...);`
+O C declara: `extern void switch_to_process(...);`
 
-Assembly defines: `global switch_to_process`
+O assembly define: `global switch_to_process`
 
-This allows seamless integration while keeping performance-critical code in assembly.
+Isso permite uma integração transparente, mantendo o código crítico de performance em assembly.
 
-## Build System Organization
+## Organização do Sistema de Build
 
-### Makefile Structure
+### Estrutura do Makefile
 
-Variables section defines tools and flags
+A seção de variáveis define ferramentas e flags
 
-Pattern rules compile sources to objects
+As pattern rules compilam fontes em objetos
 
-Explicit rules handle special cases (bootloader, linking)
+As regras explícitas tratam casos especiais (bootloader, linking)
 
-Phony targets provide user commands (all, clean, run)
+Os phony targets fornecem comandos ao usuário (all, clean, run)
 
-### Compilation Phases
+### Fases de Compilação
 
-1. Assemble bootloader to flat binary
-2. Compile C sources to ELF objects
-3. Assemble ASM sources to ELF objects
-4. Build the Rust workspace (`cargo build --release`) producing `libmunux_rs.a`
-5. Link all C/ASM objects together with the Rust static library into the kernel ELF
-6. Extract flat binary from ELF
-7. Combine into bootable ISO
+1. Montar o bootloader em binário flat
+2. Compilar as fontes C em objetos ELF
+3. Montar as fontes ASM em objetos ELF
+4. Buildar o workspace Rust (`cargo build --release`) produzindo `libmunux_rs.a`
+5. Linkar todos os objetos C/ASM junto com a biblioteca estática Rust no ELF do kernel
+6. Extrair o binário flat do ELF
+7. Combinar em uma ISO inicializável
 
-Phases 2, 3 and 4 are independent and parallelize cleanly under `make -j`.
+As fases 2, 3 e 4 são independentes e paralelizam de forma limpa sob `make -j`.
 
-### Dependency Tracking
+### Rastreamento de Dependências
 
-Make automatically tracks dependencies through header includes. Changing a header recompiles all sources that include it.
+O Make rastreia dependências automaticamente por meio das inclusões de header. Alterar um header recompila todas as fontes que o incluem.
 
-## Development Workflow
+## Fluxo de Desenvolvimento
 
-### Adding New Features
+### Adicionando Novas Funcionalidades
 
-1. Plan the feature and identify affected subsystems
-2. Create or modify headers with new APIs
-3. Implement functionality in .c or .asm files
-4. Update Makefile if adding new source files
-5. Test thoroughly in QEMU
-6. Update relevant documentation
-7. Commit changes with descriptive message
+1. Planeje a funcionalidade e identifique os subsistemas afetados
+2. Crie ou modifique headers com as novas APIs
+3. Implemente a funcionalidade em arquivos .c ou .asm
+4. Atualize o Makefile se estiver adicionando novos arquivos-fonte
+5. Teste exaustivamente no QEMU
+6. Atualize a documentação relevante
+7. Faça commit das alterações com uma mensagem descritiva
 
-### Modifying Existing Code
+### Modificando Código Existente
 
-1. Understand current implementation (read code and docs)
-2. Make targeted changes preserving existing interfaces when possible
-3. Update documentation to reflect changes
-4. Test to ensure no regressions
-5. Commit with explanation of changes
+1. Entenda a implementação atual (leia o código e a documentação)
+2. Faça alterações pontuais, preservando as interfaces existentes quando possível
+3. Atualize a documentação para refletir as alterações
+4. Teste para garantir que não há regressões
+5. Faça commit com uma explicação das alterações
 
-### Debugging Issues
+### Depurando Problemas
 
-1. Reproduce the problem reliably
-2. Add serial debug output to narrow down location
-3. Use GDB to inspect state if needed
-4. Fix the root cause, not symptoms
-5. Add checks to prevent similar issues
-6. Document the fix if non-obvious
+1. Reproduza o problema de forma confiável
+2. Adicione saída de depuração serial para restringir a localização
+3. Use o GDB para inspecionar o estado, se necessário
+4. Corrija a causa raiz, não os sintomas
+5. Adicione verificações para evitar problemas semelhantes
+6. Documente a correção se ela não for óbvia
 
-## Documentation Maintenance
+## Manutenção da Documentação
 
-Documentation must stay synchronized with code:
+A documentação deve permanecer sincronizada com o código:
 
-- Update docs when changing behavior
-- Add docs for new features
-- Remove docs for deleted features
-- Keep examples accurate and working
+- Atualize a documentação ao alterar comportamentos
+- Adicione documentação para novas funcionalidades
+- Remova a documentação de funcionalidades excluídas
+- Mantenha os exemplos precisos e funcionais
 
-Good documentation is as important as good code for an educational OS.
+Uma boa documentação é tão importante quanto um bom código para um SO educacional.
 
-## Quality Standards
+## Padrões de Qualidade
 
-### Code Quality
+### Qualidade do Código
 
-- Clear, descriptive names for functions and variables
-- Comments explaining "why", not "what"
-- Consistent indentation and formatting
-- No unnecessary complexity
-- Handle errors gracefully
+- Nomes claros e descritivos para funções e variáveis
+- Comentários que explicam o "porquê", não o "o quê"
+- Indentação e formatação consistentes
+- Nenhuma complexidade desnecessária
+- Trate os erros com elegância
 
-### Documentation Quality
+### Qualidade da Documentação
 
-- Accurate reflection of current implementation
-- Organized logically with clear hierarchy
-- Examples that compile and work
-- Cross-references to related information
-- Appropriate detail level for target audience
+- Reflexo preciso da implementação atual
+- Organizada logicamente, com hierarquia clara
+- Exemplos que compilam e funcionam
+- Referências cruzadas para informações relacionadas
+- Nível de detalhe apropriado para o público-alvo
 
-### Testing Quality
+### Qualidade dos Testes
 
-- Boot and run successfully in QEMU
-- No crashes or panics under normal operation
-- Proper error handling for abnormal conditions
-- Memory not corrupted or leaked
-- Performance acceptable for intended use
+- Inicializar e rodar com sucesso no QEMU
+- Sem crashes ou panics em operação normal
+- Tratamento adequado de erros para condições anormais
+- Memória não corrompida nem vazada
+- Performance aceitável para o uso pretendido
 
-## Future Organization
+## Organização Futura
 
-As Munux grows, additional directories will be added:
+À medida que o Munux cresce, diretórios adicionais serão incluídos:
 
-**userspace/**: User mode programs and libraries
+**userspace/**: Programas e bibliotecas de modo usuário
 
-**tools/**: Build and development utilities
+**tools/**: Utilitários de build e desenvolvimento
 
-**tests/**: Automated test suites
+**tests/**: Suítes de testes automatizados
 
-**fs/**: File system implementations
+**fs/**: Implementações de sistema de arquivos
 
-**net/**: Networking stack
+**net/**: Stack de rede
 
-The current structure provides a solid foundation for this growth while maintaining clarity and organization.
+A estrutura atual fornece uma base sólida para esse crescimento, mantendo a clareza e a organização.
 
 ---
 
-**See Also**:
-- [BUILD.md](BUILD.md) for build system details
-- [ARCHITECTURE.md](ARCHITECTURE.md) for design overview
-- Source code for implementation details
+**Veja Também**:
+- [munux-os/docs/BUILD.md](../munux-os/docs/BUILD.md) para detalhes do sistema de build
+- [munux-os/docs/ARCHITECTURE.md](../munux-os/docs/ARCHITECTURE.md) para uma visão geral do design
+- Código-fonte para detalhes de implementação

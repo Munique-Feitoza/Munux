@@ -1,7 +1,9 @@
-h# Arquivos binários do build
+# Binários de build
 *.bin
 
 # Arquivos ocultos temporários
 .git_hidden_message
 
-munux-core/build/
+# Saídas de build por flavor (cada flavor tem seu .gitignore próprio também)
+munux-os/build/
+munux-zos/build/

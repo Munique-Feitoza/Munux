@@ -1,0 +1,3 @@
+# Stub — código do kernel do munux-zos (Fases 2+ do ROADMAP).
+# Subsistemas planejados: Address Spaces, JES, parser JCL, Datasets (PS/PDS),
+# ENQ/DEQ, ponte MJP, SMF. Nenhum ainda foi implementado.
