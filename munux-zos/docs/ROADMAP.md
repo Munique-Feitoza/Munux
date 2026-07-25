@@ -1,9 +1,8 @@
 # Roadmap — Munux z/OS
 
-> Flavor **inspirado em mainframe** do ecossistema Munux. Status atual: **esqueleto**
-> (documentação + roadmap; **sem código de kernel**). Por design, **tudo está `[ ]`** —
-> nada foi construído ainda; isto é um plano de projeto, não uma lista de recursos prontos.
-> Legenda: **`[x]`** feito e validado · **`[ ]`** a fazer.
+> Flavor **inspirado em mainframe** do ecossistema Munux. Status: **Fase 1 concluída** —
+> boota no `qemu-system-s390x` (z/Architecture) e imprime "hello, mainframe!" pelo
+> console SCLP. Legenda: **`[x]`** feito e validado · **`[ ]`** a fazer.
 > Endgame do ecossistema: virar o **servidor MJP** que o [munux-os](../../munux-os/)
 > (cliente) usa para submeter jobs — ver a fase 🌉.
 
@@ -11,8 +10,8 @@
 
 |    Fase    | Nome                                   | Estado                                |
 | :---------: | -------------------------------------- | ------------------------------------- |
-| **0** | Decisão de arquitetura                | 🔴 pendente —**bloqueia tudo** |
-| **1** | Boot mínimo + console                 | ⬜ a fazer                            |
+| **0** | Decisão de arquitetura                | ✅ decidida: s390x autêntico          |
+| **1** | Boot mínimo + console                 | ✅ boota + banner SCLP no QEMU        |
 | **2** | Address Spaces + escalonamento de jobs | ⬜ a fazer                            |
 | **3** | JES: fila de jobs + spool              | ⬜ a fazer                            |
 | **4** | JCL: parser de job control             | ⬜ a fazer                            |
@@ -23,22 +22,32 @@
 
 ---
 
-## Fase 0 — Decisão de arquitetura 🔴 (pré-requisito de tudo)
+## Fase 0 — Decisão de arquitetura ✅ (decidida: s390x autêntico)
 
-> Nenhuma linha de kernel deve ser escrita antes de fixar o alvo. As opções são
-> mutuamente exclusivas e mudam todo o toolchain. Registrar a escolha em
-> [ARCHITECTURE.md](ARCHITECTURE.md).
+> Decidido em 2026-07-01: alvo **s390x (z/Architecture)** — o mainframe de verdade,
+> rodando no `qemu-system-s390x`. Racional e consequências de toolchain em
+> [ARCHITECTURE.md](ARCHITECTURE.md). É um segundo kernel do zero: nada do munux-os
+> (x86) é reaproveitado.
 
-- [ ] **Decidir:** (A) s390x autêntico *(z/Architecture, `qemu-system-s390x`, novo target
-  Rust, IPL, ELF64 big-endian — hoje o emulador não está instalado)* **vs** (B) base x86
-  compartilhada *(reaproveita PMM/VMM/heap/IDT do munux-os; roda no `qemu-system-i386`)*
-- [ ] Documentar o racional da escolha e suas consequências de toolchain
+- [x] **Decisão:** s390x autêntico (z/Architecture, 64-bit, big-endian)
+- [x] Consequências de toolchain documentadas *(verificado: não há target bare-metal
+  s390x no Rust → precisa de `s390x-unknown-none.json` custom + `build-std`;
+  `qemu-system-s390x` disponível no repo; boot pelo firmware `s390-ccw`)*
 
-## Fase 1 — Boot mínimo + console
+## Fase 1 — Boot mínimo + console (s390x) ✅
 
-- [ ] Bootstrap para a arquitetura escolhida
-- [ ] Console de operador (equivalente ao SYSLOG)
-- [ ] `kernel_main` que inicializa e imprime o banner ("hello mainframe")
+> **Verificado no `qemu-system-s390x` 11.0.2:** o kernel boota e imprime o banner
+> "hello, mainframe!" pelo console SCLP. Fundamentado no bios `s390-ccw` do QEMU.
+
+- [x] Target Rust custom `s390x-unknown-none.json` (`no_std`, 64-bit, big-endian) + `build-std`
+  *(produz ELF `IBM S/390` MSB, entry `start` em 0x10000)*
+- [x] Emulador instalado (`qemu-system-s390x` 11.0.2)
+- [x] Entry `start` (monta stack + chama o kernel) carregado pelo firmware `s390-ccw` via `-kernel`
+- [x] Console via **SCLP**: WRITE EVENT MASK habilita o console ASCII → WRITE EVENT DATA (`servc`) imprime o banner
+- [x] Espera pelo **sinal de serviço** (interrupção externa `0x2401`) via handler em low-core — correto também em hardware real, não só no QEMU síncrono
+- [x] **disabled-wait** para a CPU de forma limpa ao terminar *(QEMU sai sozinho em ~24 ms; só os 2 resets de power-on, sem exceções)*
+
+> Gates: `cargo clippy` e `rustfmt --check` limpos.
 
 ## Fase 2 — Address Spaces + escalonamento de jobs
 

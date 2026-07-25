@@ -1,0 +1,19 @@
+{
+    "llvm-target": "s390x-unknown-none",
+    "data-layout": "E-S64-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64",
+    "arch": "s390x",
+    "target-endian": "big",
+    "target-pointer-width": 64,
+    "target-c-int-width": 32,
+    "os": "none",
+    "env": "",
+    "vendor": "unknown",
+    "executables": true,
+    "linker-flavor": "ld.lld",
+    "linker": "rust-lld",
+    "panic-strategy": "abort",
+    "relocation-model": "static",
+    "cpu": "z10",
+    "features": "-vector",
+    "max-atomic-width": 64
+}

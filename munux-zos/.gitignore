@@ -6,10 +6,10 @@ build/
 *.img
 *.iso
 
-# Rust build outputs (caso o flavor adote Rust, como o munux-os)
-kernel/rust/target/
-kernel/rust/**/*.rs.bk
-kernel/rust/Cargo.lock
+# Rust build outputs (kernel bare-metal s390x)
+kernel/target/
+kernel/**/*.rs.bk
+kernel/Cargo.lock
 
 # Editor
 *.swp

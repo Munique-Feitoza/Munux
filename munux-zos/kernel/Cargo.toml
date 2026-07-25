@@ -1,0 +1,15 @@
+[package]
+name = "munux-zos"
+version = "0.1.0"
+edition = "2021"
+description = "Munux z/OS — kernel bare-metal s390x (z/Architecture)"
+
+[[bin]]
+name = "munux-zos"
+path = "src/main.rs"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

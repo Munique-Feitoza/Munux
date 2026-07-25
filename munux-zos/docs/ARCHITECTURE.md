@@ -85,8 +85,40 @@ Registros de contabilização por job (CPU, I/O, tempo de fila). Base de relató
 - A tradução EBCDIC↔ASCII acontece na borda, isolando o núcleo de encoding externo.
 - Isolamento por **address space** contém falha/abuso de um job sem derrubar o sistema.
 
-## Decisão pendente (Fase 0)
+## Arquitetura alvo (Fase 0 — decidida): s390x autêntico
 
-A **arquitetura alvo** (s390x autêntico vs base x86 compartilhada) ainda não foi
-fixada — ver [ROADMAP.md](ROADMAP.md). Toda a estrutura acima é **independente de
-ISA**; só a implementação de boot, memória e storage muda conforme a escolha.
+Decidido em 2026-07-01: o munux-zos tem como alvo o **s390x (z/Architecture)** — o
+hardware real da linhagem z/OS —, rodando no emulador `qemu-system-s390x`. A estrutura
+interna descrita acima (JES/JCL/datasets/ENQ/DEQ/ponte MJP) é **independente de ISA**; o
+que muda por esta escolha é a camada baixa: boot, memória, interrupções e I/O.
+
+**Por quê o autêntico:** a proposta é ser o z/OS "de verdade" em escala didática, não um
+x86 com roupa de mainframe. **Nada** do munux-os (x86) é reaproveitado — é um segundo
+kernel do zero.
+
+### Consequências de toolchain (verificadas)
+
+- **Rust:** não existe target bare-metal pronto para s390x (o `rustc` só traz
+  `s390x-unknown-linux-gnu` / `-musl`, ambos hospedados). Será preciso um **target custom
+  `s390x-unknown-none.json`** (`no_std`, 64-bit, big-endian) + `-Z build-std` para
+  `core`/`alloc`/`compiler_builtins` — o mesmo padrão do `i686-unknown-none` do munux-os.
+  O LLVM já gera código s390x, então o caminho é viável.
+- **Emulador:** `qemu-system-s390x` ainda não está instalado, mas está no repositório
+  (`extra/qemu-system-s390x` + `-firmware`). Instalar na Fase 1:
+  `sudo pacman -S qemu-system-s390x qemu-system-s390x-firmware`.
+- **Boot:** a máquina padrão é a `s390-ccw-virtio`; o firmware `s390-ccw` carrega o kernel
+  (via `-kernel <elf>`) e entrega o controle no ponto de entrada, com uma PSW inicial.
+
+### O que muda em relação ao munux-os (x86)
+
+| Camada | munux-os (x86) | munux-zos (s390x) |
+|---|---|---|
+| Interrupções | IDT + PIC | **PSW** + PSWs old/new por classe de interrupção em low-core |
+| Memória | paginação (2 níveis) | **DAT** (region/segment/page tables) |
+| I/O | port I/O (`inb`/`outb`) | **channel subsystem** (CCW) + virtio-ccw |
+| Console cedo | VGA / serial | **SCLP** (Service-Call) |
+| Endianness | little-endian | **big-endian** |
+
+Esses detalhes de baixo nível (PSW, DAT, SCLP, CCW) exigem consulta cuidadosa ao
+_z/Architecture Principles of Operation_ (IBM) e às particularidades do QEMU s390x — o
+trabalho de fato começa na Fase 1.

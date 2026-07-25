@@ -61,9 +61,24 @@ roda em mainframe.
 
 ## Status e próximos passos
 
-Veja o [ROADMAP.md](docs/ROADMAP.md). A **primeira decisão em aberto** é a _arquitetura
-alvo_: **s390x autêntico** (z/Architecture, `qemu-system-s390x`) vs **base x86
-compartilhada** com o munux-os. Nada de kernel é escrito antes dessa escolha.
+**Fases 0 e 1 concluídas** (2026-07-01). A arquitetura alvo é **s390x
+(z/Architecture)** — o mainframe autêntico, no `qemu-system-s390x`; é um kernel do zero
+(nada do munux-os x86 é reaproveitado). Racional e consequências de toolchain em
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); roadmap em [ROADMAP.md](docs/ROADMAP.md).
+
+O kernel já **boota e imprime pelo console SCLP** (verificado no `qemu-system-s390x`
+11.0.2). O código bare-metal (Rust `no_std`) está em [`kernel/`](kernel/).
+
+### Build e execução
+
+```bash
+make build      # compila o kernel (target s390x-unknown-none)
+make qemu       # boota no qemu-system-s390x e mostra o banner "hello, mainframe!"
+```
+
+Requer o emulador: `sudo pacman -S qemu-system-s390x qemu-system-s390x-firmware`.
+
+**Próximo passo:** Fase 2 — Address Spaces + escalonamento de jobs.
 
 ## Licença e autoria
 
