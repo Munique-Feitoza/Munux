@@ -16,6 +16,8 @@
 
 use core::panic::PanicInfo;
 
+mod jes;
+
 // ---------------------------------------------------------------------------
 // Entry + baixo nível (Assembly): entrada, Service Call + espera, handler da
 // interrupção externa, disabled-wait, e as PSWs constantes.
@@ -191,19 +193,51 @@ unsafe fn sclp_write(s: &[u8]) {
     sclp_service_call(SCLP_CMD_WRITE_EVENT_DATA, base as u64);
 }
 
+/// Escreve uma string no console (wrapper seguro sobre o SCLP).
+pub(crate) fn console_write(s: &[u8]) {
+    // SAFETY: single-CPU; o SCCB estático é usado de forma serial.
+    unsafe { sclp_write(s) };
+}
+
+/// Escreve `n` em decimal, com zeros à esquerda até `width` caracteres.
+pub(crate) fn console_write_u32_pad(n: u32, width: usize) {
+    let mut buf = [b'0'; 10];
+    let mut i = buf.len();
+    let mut v = n;
+    if v == 0 {
+        i -= 1;
+    } else {
+        while v > 0 {
+            i -= 1;
+            buf[i] = b'0' + (v % 10) as u8;
+            v /= 10;
+        }
+    }
+    let digits = buf.len() - i;
+    let start = if width > digits && width <= buf.len() {
+        buf.len() - width
+    } else {
+        i
+    };
+    console_write(&buf[start..]);
+}
+
 /// Kernel principal (chamado por `start`; retorna para o disabled-wait).
 #[no_mangle]
 extern "C" fn kmain() {
     // SAFETY: single-CPU, sem preempção; o SCCB estático é usado só aqui.
     unsafe {
         sclp_setup();
-        sclp_write(b"\n");
-        sclp_write(b"========================================\n");
-        sclp_write(b"   Munux z/OS  -  s390x / z-Architecture\n");
-        sclp_write(b"   hello, mainframe!\n");
-        sclp_write(b"========================================\n");
-        sclp_write(b"\n[fase 1] boot + console SCLP: OK\n");
     }
+    console_write(b"\n");
+    console_write(b"========================================\n");
+    console_write(b"   Munux z/OS  -  s390x / z-Architecture\n");
+    console_write(b"   hello, mainframe!\n");
+    console_write(b"========================================\n");
+    console_write(b"[fase 1] boot + console SCLP: OK\n");
+
+    // Fase 2: JES — address spaces + escalonamento de jobs + estados.
+    jes::run_demo();
 }
 
 #[panic_handler]

@@ -1,8 +1,9 @@
 # Roadmap — Munux z/OS
 
-> Flavor **inspirado em mainframe** do ecossistema Munux. Status: **Fase 1 concluída** —
-> boota no `qemu-system-s390x` (z/Architecture) e imprime "hello, mainframe!" pelo
-> console SCLP. Legenda: **`[x]`** feito e validado · **`[ ]`** a fazer.
+> Flavor **inspirado em mainframe** do ecossistema Munux. Status: **Fase 2 concluída** —
+> boota no `qemu-system-s390x` (z/Architecture), imprime pelo console SCLP e roda um JES
+> que escalona jobs por prioridade pela máquina de estados. Legenda: **`[x]`** feito e
+> validado · **`[ ]`** a fazer.
 > Endgame do ecossistema: virar o **servidor MJP** que o [munux-os](../../munux-os/)
 > (cliente) usa para submeter jobs — ver a fase 🌉.
 
@@ -12,7 +13,7 @@
 | :---------: | -------------------------------------- | ------------------------------------- |
 | **0** | Decisão de arquitetura                | ✅ decidida: s390x autêntico          |
 | **1** | Boot mínimo + console                 | ✅ boota + banner SCLP no QEMU        |
-| **2** | Address Spaces + escalonamento de jobs | ⬜ a fazer                            |
+| **2** | Address Spaces + escalonamento de jobs | ✅ JES demo no QEMU                   |
 | **3** | JES: fila de jobs + spool              | ⬜ a fazer                            |
 | **4** | JCL: parser de job control             | ⬜ a fazer                            |
 | **5** | Datasets (PS/PDS) + catálogo          | ⬜ a fazer                            |
@@ -49,11 +50,16 @@
 
 > Gates: `cargo clippy` e `rustfmt --check` limpos.
 
-## Fase 2 — Address Spaces + escalonamento de jobs
+## Fase 2 — Address Spaces + escalonamento de jobs ✅
 
-- [ ] Estrutura de *address space* (um espaço virtual por job)
-- [ ] Escalonador orientado a lote (por classe/prioridade de job, sem preempção interativa)
-- [ ] Máquina de estados do job: `INPUT → ACTIVE → OUTPUT → PURGE`
+> **Verificado no QEMU:** 3 jobs demo são escalonados por prioridade e passam por todos
+> os estados. JES em [`kernel/src/jes.rs`](../kernel/src/jes.rs).
+
+- [x] Estrutura de *address space* (um por job: ASID + pool com alloc/free)
+  *(isolação por DAT/hardware fica como hardening futuro)*
+- [x] Escalonador orientado a lote (maior prioridade primeiro, sem preempção interativa)
+- [x] Máquina de estados do job: `INPUT → ACTIVE → OUTPUT → PURGE`
+- [ ] *Futuro:* execução real do job (hoje é simulada) + isolação por DAT
 
 ## Fase 3 — JES (Job Entry Subsystem)
 
